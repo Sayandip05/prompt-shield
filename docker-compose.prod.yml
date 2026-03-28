@@ -1,0 +1,23 @@
+﻿version: "3.9"
+
+services:
+  db:
+    image: postgres:15
+  redis:
+    image: redis:7
+  web:
+    build: .
+    command: gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3
+  daphne:
+    build: .
+    command: daphne -b 0.0.0.0 -p 8001 config.asgi:application
+  celery:
+    build: .
+    command: celery -A config worker -l info
+  celery-beat:
+    build: .
+    command: celery -A config beat -l info
+  nginx:
+    image: nginx:stable
+  elastic:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.14.0

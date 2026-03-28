@@ -1,0 +1,4 @@
+﻿-r base.txt
+gunicorn
+sentry-sdk
+whitenoise
