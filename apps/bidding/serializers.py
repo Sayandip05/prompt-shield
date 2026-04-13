@@ -3,6 +3,7 @@
 from .models import Bid, Contract
 from apps.users.serializers import UserSerializer
 from apps.projects.serializers import ProjectListSerializer
+from core.sanitizers import sanitize_html
 
 
 class BidListSerializer(serializers.ModelSerializer):
@@ -59,7 +60,8 @@ class BidCreateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 "Cover letter must be at least 50 characters."
             )
-        return value
+        # Sanitize cover letter to prevent XSS
+        return sanitize_html(value, allow_basic_formatting=True)
 
 
 class ContractSerializer(serializers.ModelSerializer):
