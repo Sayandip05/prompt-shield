@@ -2,7 +2,7 @@
 from django.shortcuts import get_object_or_404
 from datetime import date, timedelta
 
-from .models import WorkLog, WeeklyReport, DeliveryProof
+from .models import WorkLog, WeeklyReport, DeliveryProof, Deliverable
 
 
 def get_worklog_by_id(log_id: int) -> WorkLog:
@@ -93,3 +93,88 @@ def has_log_for_date(contract_id: int, log_date: date) -> bool:
         contract_id=contract_id,
         date=log_date
     ).exists()
+
+
+# ============================================================================
+# DELIVERABLE SELECTORS
+# ============================================================================
+
+def get_deliverable_by_id(deliverable_id: int) -> Deliverable:
+    """Get deliverable by ID."""
+    return get_object_or_404(Deliverable, id=deliverable_id)
+
+
+def get_contract_deliverables(
+    contract_id: int,
+    status: str | None = None
+) -> QuerySet[Deliverable]:
+    """
+    Get deliverables for a contract with optional status filtering.
+    """
+    queryset = Deliverable.objects.filter(
+        contract_id=contract_id
+    ).select_related('freelancer', 'reviewed_by', 'contract__bid__project')
+    
+    if status:
+        queryset = queryset.filter(status=status)
+    
+    return queryset
+
+
+def get_freelancer_deliverables(
+    freelancer,
+    contract_id: int | None = None,
+    status: str | None = None
+) -> QuerySet[Deliverable]:
+    """Get deliverables for a freelancer."""
+    queryset = Deliverable.objects.filter(freelancer=freelancer)
+    
+    if contract_id:
+        queryset = queryset.filter(contract_id=contract_id)
+    if status:
+        queryset = queryset.filter(status=status)
+    
+    return queryset.select_related('contract__bid__project')
+
+
+def get_client_deliverables(
+    client,
+    contract_id: int | None = None,
+    status: str | None = None
+) -> QuerySet[Deliverable]:
+    """Get deliverables for a client to review."""
+    queryset = Deliverable.objects.filter(
+        contract__bid__project__client=client
+    )
+    
+    if contract_id:
+        queryset = queryset.filter(contract_id=contract_id)
+    if status:
+        queryset = queryset.filter(status=status)
+    
+    return queryset.select_related('freelancer', 'contract__bid__project')
+
+
+def get_pending_approval_deliverables(client) -> QuerySet[Deliverable]:
+    """Get deliverables pending client approval."""
+    return Deliverable.objects.filter(
+        contract__bid__project__client=client,
+        status=Deliverable.Status.SUBMITTED
+    ).select_related('freelancer', 'contract__bid__project')
+
+
+def get_approved_deliverables_for_contract(contract_id: int) -> QuerySet[Deliverable]:
+    """Get all approved deliverables for a contract."""
+    return Deliverable.objects.filter(
+        contract_id=contract_id,
+        status=Deliverable.Status.APPROVED
+    )
+
+
+def get_total_hours_from_deliverables(contract_id: int) -> float:
+    """Get total hours from approved deliverables for a contract."""
+    result = Deliverable.objects.filter(
+        contract_id=contract_id,
+        status=Deliverable.Status.APPROVED
+    ).aggregate(total=Sum('hours_logged'))
+    return result['total'] or 0

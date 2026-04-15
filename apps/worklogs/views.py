@@ -1,20 +1,34 @@
 ﻿from rest_framework import status, viewsets, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.parsers import MultiPartParser, FormParser
 
-from .models import WorkLog, WeeklyReport, DeliveryProof
+from .models import WorkLog, WeeklyReport, DeliveryProof, Deliverable
 from .serializers import (
     WorkLogSerializer,
     WorkLogCreateSerializer,
     WorkLogUpdateSerializer,
     WeeklyReportSerializer,
     DeliveryProofSerializer,
+    DeliverableSerializer,
+    DeliverableCreateSerializer,
+    DeliverableApprovalSerializer,
+    AIChatMessageSerializer,
+    AIChatResponseSerializer,
+    FileUploadSerializer,
 )
 from .services import (
     create_worklog,
     update_worklog,
     delete_worklog,
     generate_delivery_proof,
+    create_deliverable_draft,
+    submit_deliverable_for_review,
+    approve_deliverable,
+    reject_deliverable,
+    update_deliverable_draft,
+    process_ai_chat_message,
+    generate_deliverable_from_chat,
 )
 from .selectors import (
     get_worklog_by_id,
@@ -26,6 +40,7 @@ from .permissions import (
     IsWorkLogFreelancer,
     IsContractParticipant,
     IsContractFreelancer,
+    IsContractClient,
 )
 from apps.bidding.models import Contract
 from core.exceptions import ValidationError
@@ -203,3 +218,301 @@ class DeliveryProofViewSet(viewsets.ViewSet):
                 {"error": e.message, "code": e.code, "field": e.field},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+
+
+class DeliverableViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for Deliverable operations.
+    
+    Endpoints:
+    - GET /api/worklogs/deliverables/ - List deliverables
+    - POST /api/worklogs/deliverables/ - Create deliverable draft
+    - GET /api/worklogs/deliverables/{id}/ - Get deliverable detail
+    - PATCH /api/worklogs/deliverables/{id}/ - Update deliverable draft
+    - POST /api/worklogs/deliverables/{id}/submit/ - Submit for review
+    - POST /api/worklogs/deliverables/{id}/approve/ - Approve (client only)
+    - POST /api/worklogs/deliverables/{id}/reject/ - Reject (client only)
+    """
+    
+    def get_queryset(self):
+        user = self.request.user
+        contract_id = self.request.query_params.get('contract')
+        
+        queryset = Deliverable.objects.all()
+        
+        if contract_id:
+            queryset = queryset.filter(contract_id=contract_id)
+        
+        if user.role == 'FREELANCER':
+            queryset = queryset.filter(freelancer=user)
+        else:
+            queryset = queryset.filter(contract__bid__project__client=user)
+        
+        return queryset.select_related('contract', 'freelancer', 'reviewed_by')
+    
+    def get_serializer_class(self):
+        if self.action == 'create':
+            return DeliverableCreateSerializer
+        return DeliverableSerializer
+    
+    def get_permissions(self):
+        if self.action in ['approve', 'reject']:
+            return [permissions.IsAuthenticated(), IsContractClient()]
+        elif self.action in ['submit', 'update', 'partial_update', 'destroy']:
+            return [permissions.IsAuthenticated(), IsContractFreelancer()]
+        return [permissions.IsAuthenticated(), IsContractParticipant()]
+    
+    def create(self, request, *args, **kwargs):
+        """Create a deliverable from AI chat."""
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        contract_id = request.query_params.get('contract')
+        if not contract_id:
+            return Response(
+                {"error": "Contract ID required.", "code": "validation_error"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        
+        try:
+            deliverable = create_deliverable_draft(
+                freelancer=request.user,
+                contract_id=int(contract_id),
+                title=serializer.validated_data['title'],
+                description=serializer.validated_data['description'],
+                ai_chat_transcript=serializer.validated_data.get('ai_chat_transcript', []),
+                ai_generated_report=serializer.validated_data.get('ai_generated_report', ''),
+                hours_logged=serializer.validated_data.get('hours_logged', 0),
+                attached_files=serializer.validated_data.get('attached_files', []),
+            )
+            
+            return Response(
+                DeliverableSerializer(deliverable).data,
+                status=status.HTTP_201_CREATED,
+            )
+        except ValidationError as e:
+            return Response(
+                {"error": e.message, "code": e.code, "field": e.field},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+    
+    @action(detail=True, methods=['post'])
+    def submit(self, request, pk=None):
+        """Submit deliverable for client review."""
+        deliverable = self.get_object()
+        
+        try:
+            deliverable = submit_deliverable_for_review(deliverable, request.user)
+            return Response(
+                DeliverableSerializer(deliverable).data,
+                status=status.HTTP_200_OK,
+            )
+        except ValidationError as e:
+            return Response(
+                {"error": e.message, "code": e.code, "field": e.field},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+    
+    @action(detail=True, methods=['post'])
+    def approve(self, request, pk=None):
+        """Approve deliverable (client only)."""
+        deliverable = self.get_object()
+        serializer = DeliverableApprovalSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        try:
+            deliverable = approve_deliverable(
+                deliverable=deliverable,
+                client=request.user,
+                feedback=serializer.validated_data.get('feedback', '')
+            )
+            return Response(
+                DeliverableSerializer(deliverable).data,
+                status=status.HTTP_200_OK,
+            )
+        except ValidationError as e:
+            return Response(
+                {"error": e.message, "code": e.code, "field": e.field},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+    
+    @action(detail=True, methods=['post'])
+    def reject(self, request, pk=None):
+        """Reject or request revision for deliverable (client only)."""
+        deliverable = self.get_object()
+        serializer = DeliverableApprovalSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        action_type = serializer.validated_data.get('action', 'reject')
+        feedback = serializer.validated_data.get('feedback', '')
+        
+        try:
+            deliverable = reject_deliverable(
+                deliverable=deliverable,
+                client=request.user,
+                feedback=feedback,
+                request_revision=(action_type == 'request_revision')
+            )
+            return Response(
+                DeliverableSerializer(deliverable).data,
+                status=status.HTTP_200_OK,
+            )
+        except ValidationError as e:
+            return Response(
+                {"error": e.message, "code": e.code, "field": e.field},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+
+class AIChatViewSet(viewsets.ViewSet):
+    """
+    ViewSet for AI Chat operations.
+    
+    Endpoints:
+    - POST /api/worklogs/ai-chat/message/ - Send message to AI
+    - POST /api/worklogs/ai-chat/generate-deliverable/ - Generate deliverable from chat
+    """
+    permission_classes = [permissions.IsAuthenticated, IsContractFreelancer]
+    
+    @action(detail=False, methods=['post'])
+    def message(self, request):
+        """Send a message to the AI assistant."""
+        serializer = AIChatMessageSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        contract_id = request.query_params.get('contract')
+        if not contract_id:
+            return Response(
+                {"error": "Contract ID required.", "code": "validation_error"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        
+        try:
+            contract = Contract.objects.get(id=int(contract_id))
+            
+            # Verify freelancer is assigned
+            if contract.bid.freelancer != request.user:
+                return Response(
+                    {"error": "Not assigned to this contract.", "code": "permission_denied"},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+            
+            response = process_ai_chat_message(
+                contract_id=int(contract_id),
+                message=serializer.validated_data['message'],
+                chat_history=serializer.validated_data.get('chat_history', []),
+                project_name=contract.bid.project.title,
+            )
+            
+            return Response(response, status=status.HTTP_200_OK)
+            
+        except Contract.DoesNotExist:
+            return Response(
+                {"error": "Contract not found.", "code": "not_found"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+    
+    @action(detail=False, methods=['post'])
+    def generate_deliverable(self, request):
+        """Generate a deliverable from the complete chat conversation."""
+        contract_id = request.query_params.get('contract')
+        if not contract_id:
+            return Response(
+                {"error": "Contract ID required.", "code": "validation_error"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        
+        chat_transcript = request.data.get('chat_transcript', [])
+        attached_files = request.data.get('attached_files', [])
+        
+        if not chat_transcript:
+            return Response(
+                {"error": "Chat transcript required.", "code": "validation_error"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        
+        try:
+            contract = Contract.objects.get(id=int(contract_id))
+            
+            # Verify freelancer is assigned
+            if contract.bid.freelancer != request.user:
+                return Response(
+                    {"error": "Not assigned to this contract.", "code": "permission_denied"},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+            
+            deliverable = generate_deliverable_from_chat(
+                chat_transcript=chat_transcript,
+                project_name=contract.bid.project.title,
+                contract_id=int(contract_id),
+                freelancer=request.user,
+                attached_files=attached_files,
+            )
+            
+            return Response(
+                DeliverableSerializer(deliverable).data,
+                status=status.HTTP_201_CREATED,
+            )
+            
+        except Contract.DoesNotExist:
+            return Response(
+                {"error": "Contract not found.", "code": "not_found"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        except ValidationError as e:
+            return Response(
+                {"error": e.message, "code": e.code, "field": e.field},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+
+class FileUploadViewSet(viewsets.ViewSet):
+    """
+    ViewSet for file uploads (screenshots, attachments).
+    
+    Endpoints:
+    - POST /api/worklogs/upload/ - Upload a file
+    """
+    permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
+    
+    @action(detail=False, methods=['post'])
+    def upload(self, request):
+        """Upload a file and return the URL."""
+        serializer = FileUploadSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        file_obj = serializer.validated_data['file']
+        
+        # Validate file type
+        allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'application/pdf']
+        if file_obj.content_type not in allowed_types:
+            return Response(
+                {"error": "Invalid file type. Allowed: JPG, PNG, GIF, PDF", "code": "validation_error"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        
+        # Validate file size (max 10MB)
+        if file_obj.size > 10 * 1024 * 1024:
+            return Response(
+                {"error": "File too large. Max size: 10MB", "code": "validation_error"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        
+        # Save file and generate URL
+        from django.core.files.storage import default_storage
+        from django.core.files.base import ContentFile
+        import os
+        from django.utils.text import get_valid_filename
+        
+        # Sanitize filename to prevent path traversal
+        safe_filename = get_valid_filename(os.path.basename(file_obj.name))
+        file_path = f"worklogs/uploads/{request.user.id}/{safe_filename}"
+        saved_path = default_storage.save(file_path, ContentFile(file_obj.read()))
+        file_url = default_storage.url(saved_path)
+        
+        return Response({
+            "url": file_url,
+            "filename": file_obj.name,
+            "size": file_obj.size,
+        }, status=status.HTTP_201_CREATED)
