@@ -1,604 +1,380 @@
-import { useState } from 'react'
-import { 
-  Search, 
-  Briefcase, 
-  Shield, 
-  Zap, 
-  Users, 
-  CheckCircle,
+import { useState } from 'react';
+import {
+  Search,
+  Check,
   ArrowRight,
-  Star,
-  Menu,
-  X,
-  MessageSquare,
+  Code,
+  PenTool,
+  Megaphone,
   FileText,
-  Wallet
-} from 'lucide-react'
+  Headphones,
+  Calculator,
+  Scale,
+  Users,
+  Wrench,
+  Cpu,
+  Menu,
+  X
+} from 'lucide-react';
 
-const Navbar = () => {
-  const [isOpen, setIsOpen] = useState(false)
+const LandingPage = () => {
+  const [activeHeroTab, setActiveHeroTab] = useState('hire');
+  const [activeHowItWorksTab, setActiveHowItWorksTab] = useState('hiring');
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-100">
-      <div className="section-padding max-w-7xl mx-auto">
-        <div className="flex items-center justify-between h-16 lg:h-20">
-          {/* Logo */}
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center">
-              <Briefcase className="w-5 h-5 text-white" />
-            </div>
-            <span className="text-xl font-bold text-gray-900">FreelanceFlow</span>
+    <div className="min-h-screen bg-white font-sans text-gray-900 selection:bg-blue-200 selection:text-blue-900">
+      {/* Navbar */}
+      <nav className="sticky top-0 z-50 bg-white border-b border-gray-200 px-4 lg:px-6 py-3 flex items-center justify-between">
+        <div className="flex items-center gap-6">
+          <a href="#" className="text-2xl font-bold tracking-tight text-blue-600">FreelanceFlow</a>
+          <div className="hidden lg:flex items-center gap-5 text-sm font-medium text-gray-700">
+            <a href="#" className="hover:text-blue-600 transition-colors">Hire freelancers</a>
+            <a href="#" className="hover:text-blue-600 transition-colors">Find work</a>
+            <a href="#" className="hover:text-blue-600 transition-colors">Why FreelanceFlow</a>
+            <a href="#" className="hover:text-blue-600 transition-colors">Pricing</a>
+            <a href="#" className="hover:text-blue-600 transition-colors">For enterprise</a>
           </div>
-
-          {/* Desktop Navigation */}
-          <div className="hidden lg:flex items-center gap-8">
-            <a href="#how-it-works" className="text-gray-600 hover:text-gray-900 font-medium transition-colors">How it Works</a>
-            <a href="#features" className="text-gray-600 hover:text-gray-900 font-medium transition-colors">Features</a>
-            <a href="#for-freelancers" className="text-gray-600 hover:text-gray-900 font-medium transition-colors">For Freelancers</a>
-            <a href="#for-clients" className="text-gray-600 hover:text-gray-900 font-medium transition-colors">For Clients</a>
-          </div>
-
-          {/* CTA Buttons */}
-          <div className="hidden lg:flex items-center gap-4">
-            <button className="text-gray-700 hover:text-gray-900 font-medium transition-colors">
-              Log In
-            </button>
-            <button className="btn-primary">
-              Get Started
-            </button>
-          </div>
-
-          {/* Mobile Menu Button */}
-          <button 
-            className="lg:hidden p-2 text-gray-600"
-            onClick={() => setIsOpen(!isOpen)}
-          >
-            {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+        </div>
+        <div className="flex items-center gap-4">
+          <a href="/login" className="text-sm font-medium text-gray-700 hover:text-blue-600 hidden sm:block transition-colors">Log in</a>
+          <a href="/register" className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-5 py-2 rounded-full transition-colors">Get started</a>
+          <button className="lg:hidden text-gray-700 p-1" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
+            {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
           </button>
         </div>
+      </nav>
 
-        {/* Mobile Menu */}
-        {isOpen && (
-          <div className="lg:hidden py-4 border-t border-gray-100">
-            <div className="flex flex-col gap-4">
-              <a href="#how-it-works" className="text-gray-600 font-medium">How it Works</a>
-              <a href="#features" className="text-gray-600 font-medium">Features</a>
-              <a href="#for-freelancers" className="text-gray-600 font-medium">For Freelancers</a>
-              <a href="#for-clients" className="text-gray-600 font-medium">For Clients</a>
-              <hr className="border-gray-100" />
-              <button className="text-gray-700 font-medium text-left">Log In</button>
-              <button className="btn-primary w-full">Get Started</button>
-            </div>
+      {/* Mobile Menu */}
+      {isMobileMenuOpen && (
+        <div className="lg:hidden fixed inset-0 top-[60px] z-40 bg-white border-t border-gray-200 overflow-y-auto">
+          <div className="flex flex-col p-6 gap-4 text-base font-medium text-gray-800">
+            <a href="#" className="hover:text-blue-600 transition-colors py-2 border-b border-gray-100">Hire freelancers</a>
+            <a href="#" className="hover:text-blue-600 transition-colors py-2 border-b border-gray-100">Find work</a>
+            <a href="#" className="hover:text-blue-600 transition-colors py-2 border-b border-gray-100">Why FreelanceFlow</a>
+            <a href="#" className="hover:text-blue-600 transition-colors py-2 border-b border-gray-100">Pricing</a>
+            <a href="#" className="hover:text-blue-600 transition-colors py-2 border-b border-gray-100">For enterprise</a>
+            <a href="/login" className="hover:text-blue-600 transition-colors py-2 border-b border-gray-100 sm:hidden">Log in</a>
+            <a href="/register" className="bg-blue-600 hover:bg-blue-700 text-white text-center py-2 px-4 rounded-full transition-colors mt-2">Get started</a>
           </div>
-        )}
-      </div>
-    </nav>
-  )
-}
+        </div>
+      )}
 
-const Hero = () => {
-  return (
-    <section className="pt-32 lg:pt-40 pb-16 lg:pb-24 section-padding">
-      <div className="max-w-7xl mx-auto">
-        <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-          {/* Left Content */}
-          <div className="text-center lg:text-left">
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary-50 text-primary-700 rounded-full text-sm font-medium mb-6">
-              <Star className="w-4 h-4 fill-current" />
-              Trusted by 10,000+ professionals
-            </div>
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 leading-tight mb-6">
-              Find Top Talent,{' '}
-              <span className="text-primary-600">Deliver Excellence</span>
+      {/* Top Banner */}
+      <div className="bg-blue-50 text-blue-900 text-center py-3 px-4 text-sm font-medium border-b border-blue-100">
+        Stop doing everything. Hire the top 1% of talent on Business Plus. <a href="/register" className="underline hover:text-blue-700 ml-1 inline-flex items-center gap-1">Get started <ArrowRight className="w-3 h-3" /></a>
+      </div>
+
+      {/* Hero Section */}
+      <section className="px-4 lg:px-8 py-6 max-w-[1440px] mx-auto">
+        <div className="relative rounded-3xl overflow-hidden bg-gray-900 min-h-[500px] flex flex-col justify-center px-6 lg:px-16 py-16 shadow-xl">
+          {/* Background Image */}
+          <div className="absolute inset-0 opacity-40 mix-blend-overlay">
+            <img src="https://picsum.photos/seed/workspace/1920/1080" alt="Workspace" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+          </div>
+          
+          <div className="relative z-10 max-w-2xl">
+            <h1 className="text-4xl lg:text-6xl font-bold text-white leading-[1.1] mb-6 tracking-tight">
+              Hire the experts your<br />business needs
             </h1>
-            <p className="text-lg text-gray-600 mb-8 max-w-xl mx-auto lg:mx-0">
-              Connect with skilled freelancers or find your next project. Secure payments, 
-              AI-powered work tracking, and seamless collaboration all in one platform.
+            <p className="text-lg lg:text-xl text-gray-200 mb-10 font-medium max-w-xl">
+              Access skilled freelancers ready to help you build and scale — without the full-time commitment
             </p>
             
-            {/* Search Bar */}
-            <div className="flex flex-col sm:flex-row gap-3 max-w-lg mx-auto lg:mx-0 mb-8">
-              <div className="flex-1 relative">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input 
-                  type="text"
-                  placeholder="What service are you looking for?"
-                  className="w-full pl-12 pr-4 py-4 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                />
-              </div>
-              <button className="btn-primary whitespace-nowrap">
-                Search
+            {/* Toggle */}
+            <div className="flex bg-white/10 p-1 rounded-full w-fit mb-8 backdrop-blur-md border border-white/20">
+              <button 
+                onClick={() => setActiveHeroTab('hire')}
+                className={`px-6 py-2 rounded-full font-medium text-sm transition-all ${activeHeroTab === 'hire' ? 'bg-white text-gray-900 shadow-sm' : 'text-white hover:bg-white/10'}`}
+              >
+                I want to hire
+              </button>
+              <button 
+                onClick={() => setActiveHeroTab('work')}
+                className={`px-6 py-2 rounded-full font-medium text-sm transition-all ${activeHeroTab === 'work' ? 'bg-white text-gray-900 shadow-sm' : 'text-white hover:bg-white/10'}`}
+              >
+                I want to work
               </button>
             </div>
-
-            {/* Quick Categories */}
-            <div className="flex flex-wrap justify-center lg:justify-start gap-2">
-              <span className="text-sm text-gray-500">Popular:</span>
-              {['Web Development', 'Design', 'Writing', 'Marketing'].map((tag) => (
-                <button 
-                  key={tag}
-                  className="text-sm text-gray-600 hover:text-primary-600 transition-colors"
-                >
-                  {tag}
-                </button>
+            
+            {/* CTA Buttons */}
+            <div className="flex flex-col sm:flex-row gap-4 mb-8 max-w-xl">
+              <a href="/register" className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-full font-bold text-center transition-colors shadow-lg">
+                Get Started - It's Free
+              </a>
+              <a href="/login" className="bg-white hover:bg-gray-50 text-gray-900 px-8 py-4 rounded-full font-bold text-center transition-colors shadow-lg border-2 border-white">
+                Sign In
+              </a>
+            </div>
+            
+            {/* Pills */}
+            <div className="flex flex-wrap gap-3">
+              {['Web design', 'AI development', 'Video editing', 'Google Ads'].map(pill => (
+                <a key={pill} href="#" className="px-4 py-1.5 rounded-full border border-white/30 text-white text-sm hover:bg-white/20 hover:border-white/50 transition-all flex items-center gap-1.5 backdrop-blur-sm">
+                  {pill} <ArrowRight className="w-3 h-3" />
+                </a>
               ))}
             </div>
           </div>
-
-          {/* Right Image */}
-          <div className="relative">
-            <div className="relative rounded-2xl overflow-hidden shadow-2xl">
-              <img 
-                src="/images/hero-business.jpg" 
-                alt="Professional collaboration"
-                className="w-full h-[400px] lg:h-[500px] object-cover"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
-            </div>
-            
-            {/* Floating Stats Card */}
-            <div className="absolute -bottom-6 -left-6 bg-white rounded-xl shadow-xl p-4 lg:p-6">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-accent-500 rounded-full flex items-center justify-center">
-                  <CheckCircle className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-gray-900">98%</p>
-                  <p className="text-sm text-gray-600">Success Rate</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Floating Users Card */}
-            <div className="absolute -top-4 -right-4 bg-white rounded-xl shadow-xl p-4">
-              <div className="flex items-center gap-3">
-                <div className="flex -space-x-2">
-                  {[1, 2, 3].map((i) => (
-                    <div 
-                      key={i}
-                      className="w-8 h-8 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 border-2 border-white"
-                    />
-                  ))}
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-gray-900">2,000+</p>
-                  <p className="text-xs text-gray-600">Active Projects</p>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
-      </div>
-    </section>
-  )
-}
+      </section>
 
-const Stats = () => {
-  const stats = [
-    { value: '50K+', label: 'Freelancers' },
-    { value: '10K+', label: 'Clients' },
-    { value: '$25M+', label: 'Paid Out' },
-    { value: '4.9/5', label: 'Rating' },
-  ]
+      {/* Trusted By */}
+      <section className="py-10 border-b border-gray-100">
+        <p className="text-center text-xs font-bold tracking-widest text-gray-400 uppercase mb-8">Trusted by 800,000 clients</p>
+        <div className="flex flex-wrap justify-center items-center gap-10 lg:gap-20 opacity-50 grayscale hover:grayscale-0 transition-all duration-500 px-4">
+          <span className="text-xl font-bold text-[#FF5A5F] flex items-center gap-1.5"><svg viewBox="0 0 1000 1000" className="w-6 h-6 fill-current"><path d="M499.3 736.7c-51-64-81-120.1-91-168.1-10-39-9-78 1.1-114.1 14-42.1 45-87.1 91-138.1 46 51 77 96 91 138.1 10 36.1 11 75.1 1.1 114.1-11 48-41 104.1-93.2 168.1zm362.2 43c-7 47.1-39 86.1-83 105.1-85 37.1-169.1-22-279.1-22-110 0-194 59.1-279.1 22-44-19-76-58-83-105.1-6-45.1 7-92.1 34-130.1s66-59.1 111-59.1c11.1 0 28.1 4.1 45.1 15.1s32.1 22.1 42.1 22.1c10 0 25.1-11.1 42.1-22.1s34-15.1 45.1-15.1c45 0 84 21.1 111 59.1 27.1 38 40.1 85 34 130.1zM499.3 228.2c-58.1 66-102.1 124.1-123.1 181.1-20 54.1-22 109.1-5 166.1 15 53.1 48 107.1 98.1 165.1 26.1 30.1 53.1 58.1 81.1 84.1 28-26 55-54 81.1-84.1 50-58 83-112 98.1-165.1 17-57.1 15-112.1-5-166.1-21-57.1-65-115.1-123.1-181.1z"/></svg> airbnb</span>
+          <span className="text-xl font-bold text-[#FF3621]">databricks</span>
+          <span className="text-xl font-bold text-[#F38020] flex items-center gap-1.5"><svg viewBox="0 0 24 24" className="w-6 h-6 fill-current"><path d="M16.4 10.2c-.3-3.6-3.3-6.4-7-6.4-2.8 0-5.2 1.6-6.3 4C1.3 8.3 0 10 0 12c0 2.8 2.2 5 5 5h13.5c2.5 0 4.5-2 4.5-4.5 0-2.3-1.7-4.2-3.9-4.5z"/></svg> CLOUDFLARE</span>
+          <span className="text-xl font-bold text-gray-800">scale</span>
+          <span className="text-xl font-bold text-[#00A4EF] flex items-center gap-1.5"><svg viewBox="0 0 24 24" className="w-5 h-5 fill-current"><path d="M11.4 24H0V12.6h11.4V24zM24 24H12.6V12.6H24V24zM11.4 11.4H0V0h11.4v11.4zm12.6 0H12.6V0H24v11.4z"/></svg> Microsoft</span>
+          <span className="text-xl font-bold text-[#15C39A] flex items-center gap-1.5"><svg viewBox="0 0 24 24" className="w-6 h-6 fill-current"><path d="M24 12c0 6.627-5.373 12-12 12S0 18.627 0 12 5.373 0 12 0s12 5.373 12 12zm-12 7.5a7.5 7.5 0 100-15 7.5 7.5 0 000 15z"/></svg> grammarly</span>
+        </div>
+      </section>
 
-  return (
-    <section className="py-12 bg-gray-50">
-      <div className="section-padding max-w-7xl mx-auto">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
-          {stats.map((stat) => (
-            <div key={stat.label} className="text-center">
-              <p className="text-3xl lg:text-4xl font-bold text-gray-900">{stat.value}</p>
-              <p className="text-gray-600 mt-1">{stat.label}</p>
-            </div>
+      {/* Find freelancers for every type of work */}
+      <section className="px-4 lg:px-8 py-20 max-w-[1440px] mx-auto">
+        <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-10 tracking-tight">Find freelancers for every type of work</h2>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5">
+          {[
+            { icon: Cpu, label: 'AI Services' },
+            { icon: Code, label: 'Development & IT' },
+            { icon: PenTool, label: 'Design & Creative' },
+            { icon: Megaphone, label: 'Sales & Marketing' },
+            { icon: FileText, label: 'Writing & Translation' },
+            { icon: Headphones, label: 'Admin & Support' },
+            { icon: Calculator, label: 'Finance & Accounting' },
+            { icon: Scale, label: 'Legal' },
+            { icon: Users, label: 'HR & Training' },
+            { icon: Wrench, label: 'Engineering & Architecture' },
+          ].map((item, i) => (
+            <a key={i} href="#" className="group flex flex-col p-6 rounded-2xl border border-gray-200 hover:shadow-lg hover:border-blue-300 transition-all duration-300 bg-white hover:-translate-y-1">
+              <item.icon className="w-8 h-8 text-blue-600 mb-5 group-hover:scale-110 transition-transform duration-300" strokeWidth={1.5} />
+              <span className="font-medium text-gray-900">{item.label}</span>
+            </a>
           ))}
         </div>
-      </div>
-    </section>
-  )
-}
+      </section>
 
-const HowItWorks = () => {
-  const steps = [
-    {
-      icon: Briefcase,
-      title: 'Post or Find',
-      description: 'Clients post projects with requirements. Freelancers browse and find opportunities matching their skills.',
-    },
-    {
-      icon: Users,
-      title: 'Connect & Agree',
-      description: 'Review proposals, interview candidates, and agree on terms. Everything documented clearly.',
-    },
-    {
-      icon: Wallet,
-      title: 'Secure Payment',
-      description: 'Funds held in escrow until work is completed. Peace of mind for both parties.',
-    },
-    {
-      icon: FileText,
-      title: 'Track & Deliver',
-      description: 'AI-powered work logs and weekly reports. Automatic proof of delivery at project completion.',
-    },
-  ]
-
-  return (
-    <section id="how-it-works" className="py-20 lg:py-28 section-padding">
-      <div className="max-w-7xl mx-auto">
-        <div className="text-center max-w-2xl mx-auto mb-16">
-          <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
-            How FreelanceFlow Works
-          </h2>
-          <p className="text-lg text-gray-600">
-            A seamless process designed to make freelancing secure, transparent, and efficient.
-          </p>
-        </div>
-
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-          {steps.map((step, index) => (
-            <div key={step.title} className="relative">
-              <div className="bg-white rounded-2xl p-6 border border-gray-100 hover:shadow-lg transition-shadow">
-                <div className="w-12 h-12 bg-primary-50 rounded-xl flex items-center justify-center mb-4">
-                  <step.icon className="w-6 h-6 text-primary-600" />
-                </div>
-                <div className="text-sm font-semibold text-primary-600 mb-2">
-                  Step {index + 1}
-                </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  {step.title}
-                </h3>
-                <p className="text-gray-600 text-sm leading-relaxed">
-                  {step.description}
-                </p>
-              </div>
-              {index < steps.length - 1 && (
-                <div className="hidden lg:block absolute top-1/2 -right-4 transform -translate-y-1/2">
-                  <ArrowRight className="w-6 h-6 text-gray-300" />
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  )
-}
-
-const Features = () => {
-  const features = [
-    {
-      icon: Shield,
-      title: 'Secure Escrow Payments',
-      description: 'Your money is held safely until work is delivered. Release funds only when you are satisfied.',
-    },
-    {
-      icon: Zap,
-      title: 'AI-Powered Reports',
-      description: 'Automatic weekly progress reports generated from daily work logs. Professional documentation made easy.',
-    },
-    {
-      icon: MessageSquare,
-      title: 'Real-time Messaging',
-      description: 'Built-in chat for seamless communication. Stay connected with your team throughout the project.',
-    },
-    {
-      icon: FileText,
-      title: 'Proof of Delivery',
-      description: 'Generate timestamped PDF reports at project completion. Complete evidence of work delivered.',
-    },
-  ]
-
-  return (
-    <section id="features" className="py-20 lg:py-28 bg-gray-50 section-padding">
-      <div className="max-w-7xl mx-auto">
-        <div className="text-center max-w-2xl mx-auto mb-16">
-          <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
-            Everything You Need
-          </h2>
-          <p className="text-lg text-gray-600">
-            Powerful features designed to make freelancing work better for everyone.
-          </p>
-        </div>
-
-        <div className="grid md:grid-cols-2 gap-8">
-          {features.map((feature) => (
-            <div 
-              key={feature.title}
-              className="bg-white rounded-2xl p-8 border border-gray-100 hover:shadow-lg transition-shadow"
-            >
-              <div className="w-14 h-14 bg-primary-50 rounded-xl flex items-center justify-center mb-6">
-                <feature.icon className="w-7 h-7 text-primary-600" />
-              </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-3">
-                {feature.title}
-              </h3>
-              <p className="text-gray-600 leading-relaxed">
-                {feature.description}
-              </p>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  )
-}
-
-const ForClients = () => {
-  const benefits = [
-    'Access to verified freelancers',
-    'Secure escrow payments',
-    'AI-generated progress reports',
-    'Dispute resolution support',
-    'Easy project management',
-  ]
-
-  return (
-    <section id="for-clients" className="py-20 lg:py-28 section-padding">
-      <div className="max-w-7xl mx-auto">
-        <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-          <div className="order-2 lg:order-1">
-            <div className="relative rounded-2xl overflow-hidden shadow-2xl">
-              <img 
-                src="/images/corporate-meeting.jpg" 
-                alt="Business professionals collaborating"
-                className="w-full h-[350px] lg:h-[450px] object-cover"
-              />
-            </div>
+      {/* Pricing (Choose how you want to hire) */}
+      <section className="px-4 lg:px-8 py-24 bg-gradient-to-b from-blue-50/50 to-white relative overflow-hidden">
+        <div className="absolute top-0 left-0 w-full h-full bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMiIgY3k9IjIiIHI9IjIiIGZpbGw9IiNlNWU3ZWIiLz48L3N2Zz4=')] opacity-40"></div>
+        
+        <div className="relative z-10 max-w-5xl mx-auto">
+          <div className="text-center mb-14">
+            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4 tracking-tight">Choose how you want to hire</h2>
+            <p className="text-gray-600 font-medium text-lg">Flexible options designed to fit your hiring needs</p>
           </div>
           
-          <div className="order-1 lg:order-2">
-            <span className="text-primary-600 font-semibold text-sm uppercase tracking-wide">
-              For Clients
-            </span>
-            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mt-2 mb-4">
-              Hire Top Talent with Confidence
-            </h2>
-            <p className="text-lg text-gray-600 mb-8">
-              Find skilled professionals for any project. Our platform ensures quality, 
-              security, and transparency throughout your engagement.
-            </p>
-            
-            <ul className="space-y-4 mb-8">
-              {benefits.map((benefit) => (
-                <li key={benefit} className="flex items-center gap-3">
-                  <div className="w-6 h-6 bg-accent-500 rounded-full flex items-center justify-center flex-shrink-0">
-                    <CheckCircle className="w-4 h-4 text-white" />
-                  </div>
-                  <span className="text-gray-700">{benefit}</span>
-                </li>
-              ))}
-            </ul>
-            
-            <button className="btn-primary">
-              Post a Project
-            </button>
-          </div>
-        </div>
-      </div>
-    </section>
-  )
-}
-
-const ForFreelancers = () => {
-  const benefits = [
-    'Find quality projects',
-    'Guaranteed payments',
-    'AI-assisted reporting',
-    'Build your reputation',
-    'Flexible work schedule',
-  ]
-
-  return (
-    <section id="for-freelancers" className="py-20 lg:py-28 bg-gray-50 section-padding">
-      <div className="max-w-7xl mx-auto">
-        <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-          <div>
-            <span className="text-primary-600 font-semibold text-sm uppercase tracking-wide">
-              For Freelancers
-            </span>
-            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mt-2 mb-4">
-              Grow Your Freelance Career
-            </h2>
-            <p className="text-lg text-gray-600 mb-8">
-              Connect with clients looking for your skills. Get paid securely and build 
-              a portfolio that showcases your best work.
-            </p>
-            
-            <ul className="space-y-4 mb-8">
-              {benefits.map((benefit) => (
-                <li key={benefit} className="flex items-center gap-3">
-                  <div className="w-6 h-6 bg-accent-500 rounded-full flex items-center justify-center flex-shrink-0">
-                    <CheckCircle className="w-4 h-4 text-white" />
-                  </div>
-                  <span className="text-gray-700">{benefit}</span>
-                </li>
-              ))}
-            </ul>
-            
-            <button className="btn-primary">
-              Find Work
-            </button>
-          </div>
-          
-          <div>
-            <div className="relative rounded-2xl overflow-hidden shadow-2xl">
-              <img 
-                src="/images/skyscrapers.jpg" 
-                alt="Modern business district"
-                className="w-full h-[350px] lg:h-[450px] object-cover"
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-  )
-}
-
-const Testimonials = () => {
-  const testimonials = [
-    {
-      quote: "FreelanceFlow transformed how we hire freelancers. The AI reports and secure payments give us complete peace of mind.",
-      author: "Sarah Chen",
-      role: "CTO, TechStart Inc.",
-      rating: 5,
-    },
-    {
-      quote: "As a freelancer, I love the automatic weekly reports. Clients are always impressed with the professional documentation.",
-      author: "Michael Rodriguez",
-      role: "Full Stack Developer",
-      rating: 5,
-    },
-    {
-      quote: "The escrow system is brilliant. I've never had a payment issue, and the proof of delivery feature is a game changer.",
-      author: "Emily Watson",
-      role: "Marketing Consultant",
-      rating: 5,
-    },
-  ]
-
-  return (
-    <section className="py-20 lg:py-28 section-padding">
-      <div className="max-w-7xl mx-auto">
-        <div className="text-center max-w-2xl mx-auto mb-16">
-          <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
-            Trusted by Professionals
-          </h2>
-          <p className="text-lg text-gray-600">
-            See what our community has to say about their experience.
-          </p>
-        </div>
-
-        <div className="grid md:grid-cols-3 gap-8">
-          {testimonials.map((testimonial) => (
-            <div 
-              key={testimonial.author}
-              className="bg-white rounded-2xl p-8 border border-gray-100 shadow-sm"
-            >
-              <div className="flex gap-1 mb-4">
-                {[...Array(testimonial.rating)].map((_, i) => (
-                  <Star key={i} className="w-5 h-5 text-yellow-400 fill-current" />
-                ))}
-              </div>
-              <p className="text-gray-700 mb-6 leading-relaxed">
-                "{testimonial.quote}"
-              </p>
-              <div>
-                <p className="font-semibold text-gray-900">{testimonial.author}</p>
-                <p className="text-sm text-gray-600">{testimonial.role}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  )
-}
-
-const CTA = () => {
-  return (
-    <section className="py-20 lg:py-28 bg-primary-600 section-padding">
-      <div className="max-w-4xl mx-auto text-center">
-        <h2 className="text-3xl lg:text-4xl font-bold text-white mb-4">
-          Ready to Get Started?
-        </h2>
-        <p className="text-lg text-primary-100 mb-8 max-w-2xl mx-auto">
-          Join thousands of professionals who trust FreelanceFlow for their projects. 
-          Sign up today and experience the difference.
-        </p>
-        <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <button className="inline-flex items-center justify-center px-8 py-4 text-base font-medium text-primary-600 bg-white rounded-lg hover:bg-gray-100 transition-colors duration-200">
-            Find Work
-          </button>
-          <button className="inline-flex items-center justify-center px-8 py-4 text-base font-medium text-white border-2 border-white rounded-lg hover:bg-white/10 transition-colors duration-200">
-            Hire Talent
-          </button>
-        </div>
-      </div>
-    </section>
-  )
-}
-
-const Footer = () => {
-  const links = {
-    'Platform': ['How it Works', 'Features', 'Pricing', 'Enterprise'],
-    'For Clients': ['Post a Project', 'Find Freelancers', 'Enterprise Solutions'],
-    'For Freelancers': ['Find Work', 'Create Profile', 'Community'],
-    'Support': ['Help Center', 'Contact Us', 'Terms of Service', 'Privacy Policy'],
-  }
-
-  return (
-    <footer className="bg-gray-900 text-gray-300 py-16 section-padding">
-      <div className="max-w-7xl mx-auto">
-        <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-12 mb-12">
-          {/* Brand */}
-          <div className="lg:col-span-2">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center">
-                <Briefcase className="w-5 h-5 text-white" />
-              </div>
-              <span className="text-xl font-bold text-white">FreelanceFlow</span>
-            </div>
-            <p className="text-gray-400 mb-6 max-w-sm">
-              Connecting talented freelancers with clients worldwide. 
-              Secure, transparent, and efficient.
-            </p>
-          </div>
-
-          {/* Links */}
-          {Object.entries(links).map(([category, items]) => (
-            <div key={category}>
-              <h4 className="text-white font-semibold mb-4">{category}</h4>
-              <ul className="space-y-3">
-                {items.map((item) => (
-                  <li key={item}>
-                    <a href="#" className="text-gray-400 hover:text-white transition-colors">
-                      {item}
-                    </a>
+          <div className="grid md:grid-cols-2 gap-6 lg:gap-8">
+            {/* Basic Plan */}
+            <div className="bg-white rounded-3xl p-8 lg:p-10 border border-gray-200 shadow-sm hover:shadow-md transition-shadow flex flex-col">
+              <h3 className="text-3xl font-bold text-gray-900 mb-2">Basic</h3>
+              <p className="text-sm text-gray-500 mb-6 font-medium">For occasional hiring and one-off projects</p>
+              <p className="text-gray-700 mb-8 font-medium leading-relaxed">Hire skilled freelancers fast — without long-term commitments or extra overhead.</p>
+              
+              <div className="h-px bg-gray-200 w-full mb-8"></div>
+              
+              <p className="font-bold text-gray-900 mb-6">Basic includes:</p>
+              <ul className="space-y-5 mb-10 flex-1">
+                {[
+                  'Marketplace access - skilled freelancers across thousands of skills',
+                  'Talent profiles - portfolios, ratings, and work history',
+                  'Hiring tools - proposals and terms in one place',
+                  'Project workspace - messages, files, and status in one view',
+                  'Protected payments - escrow-backed pay tied to approved work'
+                ].map((feature, i) => (
+                  <li key={i} className="flex items-start gap-3 text-sm text-gray-700 font-medium">
+                    <Check className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" strokeWidth={2.5} />
+                    <span className="leading-relaxed">{feature}</span>
                   </li>
                 ))}
               </ul>
+              
+              <a href="/register" className="block w-full py-3.5 rounded-full border-2 border-blue-600 text-blue-600 font-bold hover:bg-blue-50 transition-colors text-center">Get started for free</a>
             </div>
-          ))}
+            
+            {/* Business Plus Plan */}
+            <div className="bg-white rounded-3xl p-8 lg:p-10 border-2 border-blue-300 shadow-xl flex flex-col relative transform md:-translate-y-2">
+              <div className="absolute top-0 right-0 bg-blue-100 text-blue-800 text-xs font-bold px-4 py-1.5 rounded-bl-xl rounded-tr-2xl uppercase tracking-widest">Popular</div>
+              <h3 className="text-3xl font-bold text-gray-900 mb-2">Business Plus</h3>
+              <p className="text-sm text-gray-500 mb-6 font-medium">For ongoing work, repeat hiring, and teams</p>
+              <p className="text-gray-700 mb-8 font-medium leading-relaxed">Premium tools, vetted talent, and team controls for running freelance work at scale.</p>
+              
+              <div className="h-px bg-gray-200 w-full mb-8"></div>
+              
+              <p className="font-bold text-gray-900 mb-6">Everything in Basic, plus:</p>
+              <ul className="space-y-5 mb-10 flex-1">
+                {[
+                  'Curated shortlists - we surface top matches so you can hire faster',
+                  'Expert-Vetted talent - access to the top 1% of FreelanceFlow freelancers',
+                  'Team workspace - shared hiring with roles and permissions',
+                  'Centralized billing - keep team spend in one place',
+                  'Priority support - faster help to keep projects moving'
+                ].map((feature, i) => (
+                  <li key={i} className="flex items-start gap-3 text-sm text-gray-700 font-medium">
+                    <Check className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" strokeWidth={2.5} />
+                    <span className="leading-relaxed">{feature}</span>
+                  </li>
+                ))}
+              </ul>
+              
+              <a href="/register" className="block w-full py-3.5 rounded-full bg-blue-600 text-white font-bold hover:bg-blue-700 transition-colors shadow-md hover:shadow-lg text-center">Get started for free</a>
+            </div>
+          </div>
+          
+          <div className="text-center mt-10">
+            <a href="#" className="text-blue-600 font-medium hover:underline inline-flex items-center gap-1">Compare features across plans <ArrowRight className="w-4 h-4" /></a>
+          </div>
         </div>
+      </section>
 
-        <div className="border-t border-gray-800 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-gray-500 text-sm">
-            2024 FreelanceFlow. All rights reserved.
-          </p>
-          <div className="flex gap-6">
-            <a href="#" className="text-gray-400 hover:text-white transition-colors">
-              Twitter
-            </a>
-            <a href="#" className="text-gray-400 hover:text-white transition-colors">
-              LinkedIn
-            </a>
-            <a href="#" className="text-gray-400 hover:text-white transition-colors">
-              GitHub
+      {/* Insights (Get insights into freelancer pricing) */}
+      <section className="px-4 lg:px-8 py-20 max-w-[1440px] mx-auto">
+        <div className="bg-[#111827] rounded-[2.5rem] overflow-hidden flex flex-col lg:flex-row shadow-2xl">
+          {/* Left Content */}
+          <div className="p-10 lg:p-20 flex-1 flex flex-col justify-center relative z-10">
+            <h2 className="text-4xl lg:text-5xl font-bold text-white mb-6 tracking-tight leading-[1.1]">
+              Get insights into<br />freelancer pricing
+            </h2>
+            <p className="text-gray-300 font-medium mb-10 text-lg max-w-md">
+              We'll calculate the average cost for freelancers with the skills you need.
+            </p>
+            
+            <div className="flex items-center bg-white rounded-full p-1.5 max-w-md shadow-lg">
+              <input type="text" placeholder="To start, describe what you need done." className="flex-1 px-5 py-3 bg-transparent text-gray-900 placeholder-gray-500 focus:outline-none text-sm font-medium" />
+              <button className="bg-gray-900 hover:bg-gray-800 text-white px-6 py-3 rounded-full font-medium flex items-center gap-2 transition-colors text-sm">
+                Next <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+          
+          {/* Right Chart Visualization */}
+          <div className="flex-1 relative min-h-[400px] lg:min-h-[500px] flex items-center justify-center p-8 bg-gradient-to-br from-gray-900 to-gray-800 overflow-hidden">
+            {/* Abstract glow */}
+            <div className="absolute inset-0 bg-blue-500/20 blur-[120px] rounded-full transform translate-x-1/4 translate-y-1/4"></div>
+            
+            {/* Chart Card */}
+            <div className="relative z-10 bg-gray-900/60 backdrop-blur-xl border border-gray-700/50 rounded-3xl p-8 w-full max-w-md shadow-2xl">
+              <h3 className="text-white text-center font-medium mb-10 text-lg">Cost estimate</h3>
+              
+              {/* Simple CSS Chart representation */}
+              <div className="relative h-40 flex items-end justify-between px-4">
+                {/* Curve line */}
+                <svg className="absolute inset-0 w-full h-full" preserveAspectRatio="none" viewBox="0 0 100 100">
+                  <path d="M0,100 C20,100 30,20 50,20 C70,20 80,100 100,100" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="1" strokeDasharray="4 4" />
+                  <path d="M30,50 C40,20 60,20 70,50" fill="none" stroke="#3b82f6" strokeWidth="3" strokeLinecap="round" />
+                </svg>
+                
+                {/* Highlight area */}
+                <div className="absolute left-[30%] right-[30%] bottom-0 top-[20%] bg-gradient-to-t from-blue-500/0 to-blue-500/20 rounded-t-xl border-t border-blue-500/30"></div>
+                
+                {/* Labels */}
+                <div className="text-xs font-medium text-gray-500 z-10 pb-2">Affordable</div>
+                <div className="text-sm text-white font-bold z-10 flex flex-col items-center justify-end h-full pb-10">
+                  Typical
+                </div>
+                <div className="text-xs font-medium text-gray-500 z-10 pb-2">Experts</div>
+                
+                {/* Price tags */}
+                <div className="absolute left-[22%] top-[25%] bg-gray-900 border border-blue-500 text-white text-xs font-bold px-3 py-1.5 rounded-full z-20 shadow-lg">$30/hr</div>
+                <div className="absolute right-[22%] top-[25%] bg-gray-900 border border-blue-500 text-white text-xs font-bold px-3 py-1.5 rounded-full z-20 shadow-lg">$50/hr</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* How it works */}
+      <section className="px-4 lg:px-8 py-20 max-w-[1440px] mx-auto">
+        <div className="flex flex-col md:flex-row md:items-center justify-between mb-12 gap-6">
+          <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 tracking-tight">How it works</h2>
+          
+          {/* Toggle */}
+          <div className="flex bg-white border border-gray-200 rounded-full p-1.5 w-fit shadow-sm">
+            <button 
+              onClick={() => setActiveHowItWorksTab('hiring')}
+              className={`px-6 py-2 rounded-full font-medium text-sm transition-all ${activeHowItWorksTab === 'hiring' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:text-gray-900'}`}
+            >
+              For hiring
+            </button>
+            <button 
+              onClick={() => setActiveHowItWorksTab('work')}
+              className={`px-6 py-2 rounded-full font-medium text-sm transition-all ${activeHowItWorksTab === 'work' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:text-gray-900'}`}
+            >
+              For finding work
+            </button>
+          </div>
+        </div>
+        
+        <div className="grid md:grid-cols-3 gap-6 lg:gap-10">
+          {/* Card 1 */}
+          <div className="group cursor-pointer">
+            <div className="rounded-3xl overflow-hidden mb-6 relative aspect-[4/3] bg-gray-100 shadow-sm group-hover:shadow-md transition-shadow">
+              <img src="https://picsum.photos/seed/dashboard/600/400" alt="Dashboard" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" referrerPolicy="no-referrer" />
+            </div>
+            <h3 className="text-xl lg:text-2xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors">
+              {activeHowItWorksTab === 'hiring' ? 'Find clients and remote jobs' : 'Posting jobs is always free'}
+            </h3>
+          </div>
+          
+          {/* Card 2 */}
+          <div className="group cursor-pointer">
+            <div className="rounded-3xl overflow-hidden mb-6 relative aspect-[4/3] bg-gray-100 shadow-sm group-hover:shadow-md transition-shadow">
+              <img src="https://picsum.photos/seed/meeting/600/400" alt="Meeting" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" referrerPolicy="no-referrer" />
+            </div>
+            <h3 className="text-xl lg:text-2xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors">
+              {activeHowItWorksTab === 'hiring' ? 'Submit proposals for work' : 'Get proposals and hire'}
+            </h3>
+          </div>
+          
+          {/* Card 3 */}
+          <div className="group cursor-pointer">
+            <div className="rounded-3xl overflow-hidden mb-6 relative aspect-[4/3] bg-gray-100 shadow-sm group-hover:shadow-md transition-shadow">
+              <img src="https://picsum.photos/seed/working/600/400" alt="Working" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" referrerPolicy="no-referrer" />
+            </div>
+            <h3 className="text-xl lg:text-2xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors">
+              {activeHowItWorksTab === 'hiring' ? 'Get paid as you deliver work' : 'Pay when work is done'}
+            </h3>
+          </div>
+        </div>
+      </section>
+
+      {/* Bottom CTA */}
+      <section className="px-4 lg:px-8 py-16 max-w-[1440px] mx-auto mb-10">
+        <div className="bg-gradient-to-r from-blue-500 via-blue-600 to-blue-700 rounded-[2.5rem] p-12 lg:p-20 text-center relative overflow-hidden shadow-2xl">
+          {/* Decorative elements */}
+          <div className="absolute top-0 left-0 w-full h-full bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMiIgY3k9IjIiIHI9IjIiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4xKSIvPjwvc3ZnPg==')] opacity-30 mix-blend-overlay"></div>
+          <div className="absolute -top-24 -right-24 w-96 h-96 bg-blue-400 rounded-full mix-blend-multiply filter blur-3xl opacity-50 animate-blob"></div>
+          <div className="absolute -bottom-24 -left-24 w-96 h-96 bg-blue-800 rounded-full mix-blend-multiply filter blur-3xl opacity-50 animate-blob animation-delay-2000"></div>
+          
+          <div className="relative z-10">
+            <h2 className="text-3xl lg:text-5xl font-bold text-white mb-10 tracking-tight max-w-3xl mx-auto leading-tight">
+              Find freelancers who can help you build what's next
+            </h2>
+            <a href="/register" className="inline-block bg-white text-blue-600 hover:bg-gray-50 px-10 py-4 rounded-full font-bold text-lg transition-all transform hover:scale-105 shadow-xl hover:shadow-2xl">
+              Explore freelancers
             </a>
           </div>
         </div>
-      </div>
-    </footer>
-  )
-}
+      </section>
 
-const LandingPage = () => {
-  return (
-    <div className="min-h-screen bg-white">
-      <Navbar />
-      <main>
-        <Hero />
-        <Stats />
-        <HowItWorks />
-        <Features />
-        <ForClients />
-        <ForFreelancers />
-        <Testimonials />
-        <CTA />
-      </main>
-      <Footer />
+      {/* Footer */}
+      <footer className="bg-[#111827] text-white py-16 px-4 lg:px-8 border-t border-gray-800">
+        <div className="max-w-[1440px] mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
+          <div className="text-2xl font-bold tracking-tight text-white">FreelanceFlow</div>
+          <div className="flex flex-wrap justify-center gap-8 text-sm font-medium text-gray-400">
+            <a href="#" className="hover:text-white transition-colors">Terms of Service</a>
+            <a href="#" className="hover:text-white transition-colors">Privacy Policy</a>
+            <a href="#" className="hover:text-white transition-colors">Accessibility</a>
+          </div>
+          <div className="text-sm text-gray-500 font-medium">
+            © 2026 FreelanceFlow® Global Inc.
+          </div>
+        </div>
+      </footer>
     </div>
-  )
-}
+  );
+};
 
-export default LandingPage
+export default LandingPage;
