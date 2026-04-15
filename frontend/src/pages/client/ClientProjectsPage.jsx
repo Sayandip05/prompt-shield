@@ -1,1 +1,218 @@
-﻿export default function Placeholder() { return null; }
+import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
+import {
+  LayoutDashboard, Briefcase, FileText, CreditCard, MessageSquare, Star,
+  Search, Plus, Filter, ChevronDown, ExternalLink
+} from 'lucide-react'
+import { projectsAPI } from '../../api/projects'
+
+const Sidebar = ({ active }) => {
+  const navigate = useNavigate()
+  const links = [
+    { icon: LayoutDashboard, label: 'Dashboard', path: '/client/dashboard' },
+    { icon: Briefcase, label: 'Projects', path: '/client/projects' },
+    { icon: CreditCard, label: 'Payments', path: '/client/payments' },
+    { icon: MessageSquare, label: 'Messages', path: '/client/messages' },
+    { icon: Star, label: 'Reviews', path: '/client/reviews' },
+  ]
+  return (
+    <aside className="w-64 bg-white border-r border-gray-100 min-h-screen flex-shrink-0">
+      <div className="p-6 border-b border-gray-100">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center">
+            <Briefcase className="w-5 h-5 text-white" />
+          </div>
+          <span className="text-lg font-bold text-gray-900">FreelanceFlow</span>
+        </div>
+      </div>
+      <nav className="p-4 space-y-1">
+        {links.map((link) => (
+          <button key={link.path} onClick={() => navigate(link.path)}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+              active === link.path ? 'bg-primary-50 text-primary-700' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+            }`}>
+            <link.icon className="w-5 h-5" />{link.label}
+          </button>
+        ))}
+      </nav>
+    </aside>
+  )
+}
+
+const STATUS_COLORS = {
+  OPEN: 'bg-green-100 text-green-700',
+  IN_PROGRESS: 'bg-blue-100 text-blue-700',
+  COMPLETED: 'bg-gray-100 text-gray-600',
+  CANCELLED: 'bg-red-100 text-red-600',
+}
+
+const CreateProjectModal = ({ onClose, onCreated }) => {
+  const [form, setForm] = useState({ title: '', description: '', budget: '', skills: '' })
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setLoading(true)
+    try {
+      const res = await projectsAPI.createProject({
+        title: form.title,
+        description: form.description,
+        budget: parseFloat(form.budget),
+        required_skills: form.skills.split(',').map(s => s.trim()).filter(Boolean),
+      })
+      onCreated(res.data)
+    } catch (err) {
+      setError('Failed to create project. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
+      <div className="bg-white rounded-2xl w-full max-w-lg p-6 shadow-xl">
+        <h2 className="text-xl font-bold text-gray-900 mb-5">Post a New Project</h2>
+        {error && <p className="text-sm text-red-600 mb-4 bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Project Title</label>
+            <input value={form.title} onChange={e => setForm({...form, title: e.target.value})} required placeholder="e.g. Build a React Dashboard"
+              className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+            <textarea value={form.description} onChange={e => setForm({...form, description: e.target.value})} required rows={3} placeholder="Describe what you need..."
+              className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm resize-none" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Budget (USD)</label>
+            <input type="number" value={form.budget} onChange={e => setForm({...form, budget: e.target.value})} required min="1" placeholder="500"
+              className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Required Skills (comma-separated)</label>
+            <input value={form.skills} onChange={e => setForm({...form, skills: e.target.value})} placeholder="React, Node.js, PostgreSQL"
+              className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm" />
+          </div>
+          <div className="flex gap-3 pt-2">
+            <button type="button" onClick={onClose} className="btn-secondary flex-1">Cancel</button>
+            <button type="submit" disabled={loading} className="btn-primary flex-1 disabled:opacity-60">
+              {loading ? 'Posting...' : 'Post Project'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+const ClientProjectsPage = () => {
+  const navigate = useNavigate()
+  const [projects, setProjects] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState('ALL')
+  const [showModal, setShowModal] = useState(false)
+
+  useEffect(() => {
+    fetchProjects()
+  }, [])
+
+  const fetchProjects = async () => {
+    setLoading(true)
+    try {
+      const res = await projectsAPI.getMyProjects()
+      setProjects(res.data?.results || res.data || [])
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const filtered = projects.filter(p => {
+    const matchSearch = p.title?.toLowerCase().includes(search.toLowerCase())
+    const matchStatus = statusFilter === 'ALL' || p.status === statusFilter
+    return matchSearch && matchStatus
+  })
+
+  return (
+    <div className="flex min-h-screen bg-gray-50">
+      <Sidebar active="/client/projects" />
+      {showModal && (
+        <CreateProjectModal
+          onClose={() => setShowModal(false)}
+          onCreated={(proj) => { setProjects(prev => [proj, ...prev]); setShowModal(false) }}
+        />
+      )}
+      <div className="flex-1 p-8">
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">My Projects</h1>
+            <p className="text-gray-600 mt-1">{projects.length} project{projects.length !== 1 ? 's' : ''} total</p>
+          </div>
+          <button onClick={() => setShowModal(true)} className="btn-primary flex items-center gap-2">
+            <Plus className="w-4 h-4" /> Post Project
+          </button>
+        </div>
+
+        {/* Filters */}
+        <div className="flex flex-col sm:flex-row gap-3 mb-6">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search projects..."
+              className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm" />
+          </div>
+          <div className="relative">
+            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
+              className="pl-9 pr-8 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm bg-white appearance-none">
+              <option value="ALL">All Status</option>
+              <option value="OPEN">Open</option>
+              <option value="IN_PROGRESS">In Progress</option>
+              <option value="COMPLETED">Completed</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Projects Grid */}
+        {loading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {[...Array(4)].map((_, i) => <div key={i} className="h-44 bg-gray-100 rounded-2xl animate-pulse" />)}
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="text-center py-20 bg-white rounded-2xl border border-gray-100">
+            <Briefcase className="w-14 h-14 text-gray-300 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">{search ? 'No projects found' : 'No projects yet'}</h3>
+            <p className="text-gray-500 mb-6">{search ? 'Try a different search term' : 'Post your first project to get started'}</p>
+            {!search && <button onClick={() => setShowModal(true)} className="btn-primary">Post a Project</button>}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {filtered.map(project => (
+              <div key={project.id} className="bg-white rounded-2xl border border-gray-100 p-6 hover:shadow-md transition-shadow">
+                <div className="flex items-start justify-between mb-3">
+                  <h3 className="font-semibold text-gray-900 flex-1 pr-3">{project.title}</h3>
+                  <span className={`text-xs px-2.5 py-1 rounded-full font-medium whitespace-nowrap ${STATUS_COLORS[project.status] || 'bg-gray-100 text-gray-600'}`}>
+                    {project.status}
+                  </span>
+                </div>
+                <p className="text-sm text-gray-600 mb-4 line-clamp-2">{project.description}</p>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-semibold text-gray-900">${project.budget?.toLocaleString()}</span>
+                  <button onClick={() => navigate(`/client/projects/${project.id}`)}
+                    className="text-sm text-primary-600 hover:text-primary-700 font-medium flex items-center gap-1">
+                    View <ExternalLink className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+export default ClientProjectsPage
