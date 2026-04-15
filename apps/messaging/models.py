@@ -39,6 +39,14 @@ class Message(models.Model):
         related_name="sent_messages"
     )
     content = models.TextField()
+    
+    # Attachments
+    attachments = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="List of attachment URLs with metadata"
+    )
+    
     is_read = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     
