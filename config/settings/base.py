@@ -11,9 +11,15 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 env = environ.Env(
     DEBUG=(bool, False),
+    DJANGO_ENV=(str, "local"),
     SECRET_KEY=(str, "change-me-in-production"),
     ALLOWED_HOSTS=(list, []),
     DATABASE_URL=(str, "sqlite:///db.sqlite3"),
+    DATABASE_NAME=(str, "freelanceflow"),
+    DATABASE_USER=(str, "postgres"),
+    DATABASE_PASSWORD=(str, "postgres"),
+    DATABASE_HOST=(str, "localhost"),
+    DATABASE_PORT=(str, "5432"),
     REDIS_URL=(str, "redis://localhost:6379/0"),
     CELERY_BROKER_URL=(str, "redis://localhost:6379/0"),
     CELERY_RESULT_BACKEND=(str, "redis://localhost:6379/0"),
@@ -24,6 +30,7 @@ env = environ.Env(
     AWS_SECRET_ACCESS_KEY=(str, ""),
     AWS_STORAGE_BUCKET_NAME=(str, ""),
     AWS_S3_REGION_NAME=(str, "us-east-1"),
+    AWS_CLOUDFRONT_DOMAIN=(str, ""),
     GROQ_API_KEY=(str, ""),
     LANGSMITH_API_KEY=(str, ""),
     LANGSMITH_PROJECT=(str, "freelanceflow"),
@@ -35,6 +42,7 @@ env = environ.Env(
     EMAIL_HOST_PASSWORD=(str, ""),
     DEFAULT_FROM_EMAIL=(str, "noreply@freelanceflow.com"),
     FRONTEND_URL=(str, "http://localhost:3000"),
+    CORS_ALLOWED_ORIGINS=(list, ["http://localhost:3000", "http://127.0.0.1:3000"]),
     PLATFORM_CUT_PERCENTAGE=(int, 10),
     SENTRY_DSN=(str, ""),
 )
@@ -43,6 +51,7 @@ environ.Env.read_env(os.path.join(BASE_DIR, ".env"))
 
 SECRET_KEY = env("SECRET_KEY")
 DEBUG = env("DEBUG")
+DJANGO_ENV = env("DJANGO_ENV")
 ALLOWED_HOSTS = env("ALLOWED_HOSTS")
 
 DJANGO_APPS = [
@@ -81,6 +90,7 @@ LOCAL_APPS = [
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 
 MIDDLEWARE = [
+    "core.middleware_shutdown.GracefulShutdownMiddleware",  # Graceful shutdown - must be first
     "django.middleware.security.SecurityMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "core.middleware.RequestLoggingMiddleware",
@@ -178,10 +188,8 @@ SIMPLE_JWT = {
 }
 
 # CORS
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-]
+CORS_ALLOWED_ORIGINS = env("CORS_ALLOWED_ORIGINS")
+CORS_ALLOW_CREDENTIALS = True
 
 # Redis
 REDIS_URL = env("REDIS_URL")
@@ -214,6 +222,7 @@ AWS_ACCESS_KEY_ID = env("AWS_ACCESS_KEY_ID")
 AWS_SECRET_ACCESS_KEY = env("AWS_SECRET_ACCESS_KEY")
 AWS_STORAGE_BUCKET_NAME = env("AWS_STORAGE_BUCKET_NAME")
 AWS_S3_REGION_NAME = env("AWS_S3_REGION_NAME")
+AWS_CLOUDFRONT_DOMAIN = env("AWS_CLOUDFRONT_DOMAIN")
 AWS_S3_FILE_OVERWRITE = False
 AWS_DEFAULT_ACL = None
 
@@ -310,5 +319,6 @@ SIMPLE_JWT = {
     "AUTH_TOKEN_CLASSES": ("rest_framework_simplejwt.tokens.AccessToken",),
     "TOKEN_TYPE_CLAIM": "token_type",
 }
-   
+  
+ 
  
