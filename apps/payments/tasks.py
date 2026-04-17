@@ -1,17 +1,17 @@
 ﻿from celery import shared_task
-import stripe
+import razorpay
 from django.conf import settings
 
 from .models import Payment, PaymentEvent
 from .services import confirm_escrow_payment, record_payment_event
 
-stripe.api_key = settings.STRIPE_SECRET_KEY
+razorpay_client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
 
 
 @shared_task
-def process_stripe_webhook_task(event_id: str, event_type: str, event_data: dict):
+def process_razorpay_webhook_task(event_id: str, event_type: str, event_data: dict):
     """
-    Process Stripe webhook event asynchronously.
+    Process Razorpay webhook event asynchronously.
     """
     from .services import has_payment_event_been_processed
     
@@ -19,26 +19,30 @@ def process_stripe_webhook_task(event_id: str, event_type: str, event_data: dict
     if has_payment_event_been_processed(event_id):
         return
     
-    if event_type == 'payment_intent.succeeded':
-        payment_intent_id = event_data.get('id')
+    if event_type == 'payment.captured':
+        payment_entity = event_data.get('payment', {}).get('entity', {})
+        razorpay_order_id = payment_entity.get('order_id')
+        razorpay_payment_id = payment_entity.get('id')
+        
         try:
-            payment = confirm_escrow_payment(payment_intent_id)
+            payment = confirm_escrow_payment(razorpay_order_id, razorpay_payment_id)
             record_payment_event(payment, event_id, event_type)
         except Exception as e:
             # Log error but don't raise (webhook should return 200)
-            print(f"Error processing payment_intent.succeeded: {e}")
+            print(f"Error processing payment.captured: {e}")
     
-    elif event_type == 'payment_intent.payment_failed':
+    elif event_type == 'payment.failed':
         # Handle failed payment
-        payment_intent_id = event_data.get('id')
+        payment_entity = event_data.get('payment', {}).get('entity', {})
+        razorpay_order_id = payment_entity.get('order_id')
         # TODO: Notify client of failed payment
-        pass
+        print(f"Payment failed for order: {razorpay_order_id}")
 
 
 @shared_task
-def stripe_transfer_to_freelancer_task(payment_id: int, amount: float):
+def razorpay_transfer_to_freelancer_task(payment_id: int, amount: float):
     """
-    Transfer funds to freelancer's Stripe Connect account.
+    Transfer funds to freelancer using Razorpay Route/Payout.
     
     Args:
         payment_id: Payment ID
@@ -51,18 +55,22 @@ def stripe_transfer_to_freelancer_task(payment_id: int, amount: float):
         contract = payment.contract
         freelancer = contract.bid.freelancer
         
-        # TODO: Get freelancer's Stripe Connect account ID
-        # This requires Stripe Connect setup
+        # TODO: Implement Razorpay Route or Payout API
+        # This requires freelancer's bank account details or UPI
         # For now, just log the transfer
-        print(f"Would transfer ${amount} to freelancer {freelancer.email}")
+        print(f"Would transfer ₹{amount} to freelancer {freelancer.email}")
         
-        # Example transfer code (requires Stripe Connect):
-        # stripe.Transfer.create(
-        #     amount=int(amount * 100),
-        #     currency='usd',
-        #     destination=freelancer_stripe_account_id,
-        #     transfer_group=f'contract_{contract.id}',
-        # )
+        # Example payout code (requires Razorpay X account):
+        # payout = razorpay_client.payout.create({
+        #     'account_number': settings.RAZORPAY_ACCOUNT_NUMBER,
+        #     'amount': int(amount * 100),
+        #     'currency': 'INR',
+        #     'mode': 'IMPS',
+        #     'purpose': 'payout',
+        #     'fund_account_id': freelancer_fund_account_id,
+        #     'queue_if_low_balance': True,
+        #     'reference_id': f'contract_{contract.id}',
+        # })
         
     except Payment.DoesNotExist:
         print(f"Payment {payment_id} not found")

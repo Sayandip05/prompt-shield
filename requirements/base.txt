@@ -1,7 +1,6 @@
 ﻿django==4.2.*
 djangorestframework
 djangorestframework-simplejwt
-django-allauth
 django-cors-headers
 django-environ
 django-filter
@@ -17,8 +16,15 @@ elasticsearch-dsl
 django-elasticsearch-dsl
 django-storages
 boto3
-anthropic
+groq
 weasyprint
-stripe
+razorpay
 django-axes
 drf-spectacular
+Pillow
+python-magic
+langsmith
+langchain
+langchain-core
+langchain-groq
+langgraph

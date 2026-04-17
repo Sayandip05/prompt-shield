@@ -1,4 +1,4 @@
-﻿.env
+.env
 .venv/
 venv/
 __pycache__/
@@ -6,4 +6,13 @@ __pycache__/
 db.sqlite3
 node_modules/
 frontend/node_modules/
+
+
+# Tooling
+.qoder/
+.ruff_cache/
+.github/
+
+
+extra_docs/
 docs/
