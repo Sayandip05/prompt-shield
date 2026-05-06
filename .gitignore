@@ -13,6 +13,3 @@ frontend/dist/
 .ruff_cache/
 .github/
 
-
-extra_docs/
-docs/
