@@ -1,4 +1,4 @@
-﻿from rest_framework import status, viewsets, permissions
+from rest_framework import status, viewsets, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
@@ -100,5 +100,8 @@ class MessageViewSet(viewsets.ReadOnlyModelViewSet):
     def get_queryset(self):
         conversation_id = self.request.query_params.get('conversation')
         if conversation_id:
-            return get_conversation_messages(conversation_id)
+            return Message.objects.filter(
+                conversation_id=conversation_id,
+                conversation__in=get_user_conversations(self.request.user),
+            ).select_related('sender').order_by('-created_at')[:50]
         return Message.objects.none()

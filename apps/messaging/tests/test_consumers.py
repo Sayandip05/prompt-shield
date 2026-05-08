@@ -1,4 +1,4 @@
-﻿from django.test import TestCase
+from django.test import TestCase
 
 
 class messaging_test_consumers_Tests(TestCase):

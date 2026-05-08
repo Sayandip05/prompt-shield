@@ -1,4 +1,4 @@
-﻿from django.db import transaction
+from django.db import transaction
 
 from .models import Conversation, Message
 from apps.bidding.models import Contract
