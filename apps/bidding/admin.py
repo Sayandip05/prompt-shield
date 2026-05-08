@@ -63,7 +63,7 @@ class ReviewAdmin(admin.ModelAdmin):
 class ReviewResponseAdmin(admin.ModelAdmin):
     """Admin configuration for ReviewResponse model."""
 
-    list_display = ["id", "review", "responder", "created_at"]
+    list_display = ["id", "review", "created_at"]
     search_fields = ["review__id", "responder__email", "response_text"]
     readonly_fields = ["created_at"]
 
@@ -72,7 +72,7 @@ class ReviewResponseAdmin(admin.ModelAdmin):
 class ContractTerminationRequestAdmin(admin.ModelAdmin):
     """Admin configuration for ContractTerminationRequest model."""
 
-    list_display = ["id", "contract", "requested_by", "reason", "status", "created_at"]
+    list_display = ["id", "contract", "requester", "reason", "status", "created_at"]
     list_filter = ["status", "reason", "created_at"]
     search_fields = ["contract__bid__project__title", "requested_by__email"]
     readonly_fields = ["created_at", "updated_at"]
