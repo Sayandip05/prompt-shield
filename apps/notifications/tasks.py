@@ -1,4 +1,4 @@
-﻿from celery import shared_task
+from celery import shared_task
 from django.core.mail import send_mail
 from django.conf import settings
 from apps.notifications.selectors import get_notification_by_id

@@ -1,4 +1,4 @@
-﻿from django.db import transaction
+from django.db import transaction
 from apps.notifications.models import Notification
 from apps.notifications.tasks import send_notification_email
 
@@ -7,9 +7,15 @@ def create_notification(
     recipient,
     title: str,
     body: str,
-    notification_type: str
+    notification_type: str | None = None,
+    **kwargs
 ) -> Notification:
     """Create a new in-app notification."""
+    notification_type = notification_type or kwargs.get("type")
+    
+    if not notification_type:
+        raise ValueError("notification_type is required.")
+    
     with transaction.atomic():
         notification = Notification.objects.create(
             recipient=recipient,
