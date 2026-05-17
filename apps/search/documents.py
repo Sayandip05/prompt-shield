@@ -1,4 +1,4 @@
-﻿from django_elasticsearch_dsl import Document, fields
+from django_elasticsearch_dsl import Document, fields
 from django_elasticsearch_dsl.registries import registry
 from apps.projects.models import Project, ProjectSkill
 from apps.users.models import User, FreelancerProfile
@@ -37,6 +37,11 @@ class ProjectDocument(Document):
         """Prepare skills from related ProjectSkill model."""
         return [skill.skill_name for skill in instance.skills.all()]
 
+    def get_instances_from_related(self, related_instance):
+        if isinstance(related_instance, User):
+            return related_instance.projects.all()
+        return None
+
 
 @registry.register_document
 class FreelancerDocument(Document):
@@ -68,3 +73,9 @@ class FreelancerDocument(Document):
     def prepare_skills(self, instance):
         """Prepare skills from JSON field."""
         return instance.skills if instance.skills else []
+
+    def get_instances_from_related(self, related_instance):
+        if isinstance(related_instance, User):
+            if hasattr(related_instance, 'freelancer_profile'):
+                return related_instance.freelancer_profile
+        return None

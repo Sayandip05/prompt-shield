@@ -1,4 +1,4 @@
-﻿from django.test import TestCase
+from django.test import TestCase
 
 
 class search_test_views_Tests(TestCase):
