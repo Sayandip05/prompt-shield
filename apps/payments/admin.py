@@ -12,18 +12,18 @@ class PaymentAdmin(admin.ModelAdmin):
         "contract",
         "total_amount",
         "status",
-        "stripe_payment_intent_id",
+        "razorpay_order_id",
         "created_at",
         "updated_at",
     ]
     list_filter = ["status", "created_at"]
-    search_fields = ["contract__bid__project__title", "stripe_payment_intent_id"]
+    search_fields = ["contract__bid__project__title", "razorpay_order_id"]
     readonly_fields = ["created_at", "updated_at"]
     date_hierarchy = "created_at"
 
     fieldsets = (
         ("Payment Details", {"fields": ("contract", "total_amount", "status")}),
-        ("Stripe", {"fields": ("stripe_payment_intent_id",), "classes": ("collapse",)}),
+        ("Razorpay", {"fields": ("razorpay_order_id", "razorpay_payment_id"), "classes": ("collapse",)}),
         (
             "Timestamps",
             {"fields": ("created_at", "updated_at"), "classes": ("collapse",)},
@@ -55,9 +55,9 @@ class PlatformEarningAdmin(admin.ModelAdmin):
 class PaymentEventAdmin(admin.ModelAdmin):
     """Admin configuration for PaymentEvent model."""
 
-    list_display = ["id", "payment", "event_type", "stripe_event_id", "processed_at"]
+    list_display = ["id", "payment", "event_type", "razorpay_event_id", "processed_at"]
     list_filter = ["event_type", "processed_at"]
-    search_fields = ["stripe_event_id", "event_type"]
+    search_fields = ["razorpay_event_id", "event_type"]
     readonly_fields = ["processed_at"]
     date_hierarchy = "processed_at"
 

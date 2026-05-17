@@ -1,4 +1,4 @@
-﻿from django.db.models import QuerySet, Sum
+from django.db.models import QuerySet, Sum
 from django.shortcuts import get_object_or_404
 
 from .models import Payment, Escrow, PlatformEarning, PaymentEvent
@@ -56,9 +56,9 @@ def get_platform_total_earnings() -> float:
     return result['total'] or 0
 
 
-def has_payment_event_been_processed(stripe_event_id: str) -> bool:
-    """Check if a Stripe event has already been processed."""
-    return PaymentEvent.objects.filter(stripe_event_id=stripe_event_id).exists()
+def has_payment_event_been_processed(razorpay_event_id: str) -> bool:
+    """Check if a Razorpay event has already been processed."""
+    return PaymentEvent.objects.filter(razorpay_event_id=razorpay_event_id).exists()
 
 
 def get_escrow_by_payment(payment_id: int) -> Escrow | None:

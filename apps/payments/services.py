@@ -1,15 +1,18 @@
-﻿import razorpay
+import razorpay
 import hmac
 import hashlib
 from django.db import transaction
 from django.conf import settings
 from django.utils import timezone
+from django.contrib.auth import get_user_model
 
 from .models import Payment, Escrow, PlatformEarning, PaymentEvent
 from apps.bidding.models import Contract
 from apps.projects.services import mark_project_completed
 from core.exceptions import ValidationError, PermissionDeniedError, NotFoundError
 from core.utils import calculate_platform_cut
+
+User = get_user_model()
 
 
 razorpay_client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
@@ -107,13 +110,21 @@ def release_payment(contract: Contract, client) -> Payment:
     Returns:
         Updated Payment instance
     """
-    from apps.notifications.tasks import (
-        notify_freelancer_payment_released,
-        generate_delivery_proof,
-    )
+    from apps.payments.tasks import razorpay_transfer_to_freelancer_task
     
     if contract.client != client:
         raise PermissionDeniedError("Only the client can release payment.")
+    
+    fund_account_id = getattr(
+        getattr(contract.bid.freelancer, "freelancer_profile", None),
+        "razorpay_fund_account_id",
+        "",
+    )
+    if not settings.RAZORPAY_ACCOUNT_NUMBER:
+        raise ValidationError("Razorpay account number is not configured for payouts.")
+    
+    if not fund_account_id:
+        raise ValidationError("Freelancer payout account is not configured.")
     
     with transaction.atomic():
         try:
@@ -130,39 +141,19 @@ def release_payment(contract: Contract, client) -> Payment:
             settings.PLATFORM_CUT_PERCENTAGE
         )
         
-        # Create platform earning record
-        PlatformEarning.objects.create(
-            payment=payment,
-            cut_percentage=cut_info['cut_percentage'],
-            cut_amount=cut_info['cut_amount'],
-        )
-        
-        # Update payment status
-        payment.status = Payment.Status.RELEASED
+        # Mark payout as pending. The async payout task marks it RELEASED only after Razorpay accepts it.
+        payment.status = Payment.Status.PAYOUT_PENDING
+        payment.payout_error = ""
         payment.save()
         
-        # Update escrow record
-        escrow = payment.escrow
-        escrow.released_at = timezone.now()
-        escrow.save()
-        
-        # Complete the contract
-        contract.is_active = False
-        contract.end_date = timezone.now()
-        contract.save()
-        
-        # Mark project as completed
-        mark_project_completed(contract.bid.project)
-        
-        # Schedule post-release tasks
-        transaction.on_commit(lambda: [
+        def after_commit():
             razorpay_transfer_to_freelancer_task.delay(
                 payment.id,
                 float(cut_info['freelancer_amount'])
-            ),
-            notify_freelancer_payment_released.delay(contract.id),
-            generate_delivery_proof.delay(contract.id),
-        ])
+            )
+        
+        # Schedule payout after the database transition commits.
+        transaction.on_commit(after_commit)
         
         return payment
 
@@ -188,7 +179,12 @@ def verify_razorpay_signature(order_id: str, payment_id: str, signature: str) ->
     return hmac.compare_digest(generated_signature, signature)
 
 
-def process_razorpay_webhook(payload: dict, raw_body: bytes, signature: str) -> bool:
+def process_razorpay_webhook(
+    payload: dict,
+    raw_body: bytes,
+    signature: str,
+    event_id: str | None = None,
+) -> bool:
     """
     Process Razorpay webhook event with signature verification.
     
@@ -196,6 +192,7 @@ def process_razorpay_webhook(payload: dict, raw_body: bytes, signature: str) -> 
         payload: Request body (dict)
         raw_body: Raw request body (bytes) - required for signature verification
         signature: Razorpay signature header
+        event_id: Unique Razorpay webhook event ID header
     
     Returns:
         True if processed successfully
@@ -212,7 +209,10 @@ def process_razorpay_webhook(payload: dict, raw_body: bytes, signature: str) -> 
     except razorpay.errors.SignatureVerificationError:
         raise PermissionDeniedError("Invalid signature")
     
-    event_id = payload.get('event')
+    if not event_id:
+        raise ValidationError("Missing Razorpay event ID.")
+    
+    event_type = payload.get('event')
     
     # Check idempotency
     if has_payment_event_been_processed(event_id):
@@ -221,7 +221,7 @@ def process_razorpay_webhook(payload: dict, raw_body: bytes, signature: str) -> 
     # Process event asynchronously
     process_razorpay_webhook_task.delay(
         event_id,
-        payload.get('event'),
+        event_type,
         payload.get('payload')
     )
     
@@ -264,7 +264,7 @@ def process_contract_termination_payment(
     
     with transaction.atomic():
         # Update payment status
-        payment.status = Payment.Status.REFUNDED if refund_percentage == 100 else Payment.Status.PARTIALLY_REFUNDED
+        payment.status = Payment.Status.REFUNDED
         payment.refund_amount = refund_amount
         payment.save()
         
@@ -277,6 +277,7 @@ def process_contract_termination_payment(
         # Process refund if any
         if refund_amount > 0:
             # Schedule refund task
+            from apps.payments.tasks import process_razorpay_refund_task
             transaction.on_commit(
                 lambda: process_razorpay_refund_task.delay(
                     payment.id,
@@ -286,6 +287,7 @@ def process_contract_termination_payment(
         
         # Process freelancer payment if any
         if freelancer_amount > 0:
+            from apps.payments.tasks import razorpay_transfer_to_freelancer_task
             cut_info = calculate_platform_cut(
                 freelancer_amount,
                 settings.PLATFORM_CUT_PERCENTAGE
@@ -409,7 +411,7 @@ def initiate_payment_dispute(
             recipient=other_party,
             title="Payment Dispute Initiated",
             body=f"{disputer.get_full_name()} has initiated a payment dispute.",
-            type="PAYMENT_DISPUTE",
+            notification_type="PAYMENT_DISPUTE",
             data={
                 "payment_id": payment.id,
                 "dispute_id": dispute.id
@@ -425,7 +427,7 @@ def initiate_payment_dispute(
                 recipient=admin,
                 title="New Payment Dispute",
                 body=f"Payment dispute initiated for contract {contract.id}.",
-                type="PAYMENT_DISPUTE_ADMIN",
+                notification_type="PAYMENT_DISPUTE_ADMIN",
                 data={
                     "payment_id": payment.id,
                     "dispute_id": dispute.id

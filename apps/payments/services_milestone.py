@@ -3,11 +3,13 @@ Payment Milestone Services
 Manages milestone-based payments for contracts
 """
 from django.db import transaction
+from django.db.models import Max, Sum
 from django.core.exceptions import ValidationError
+from django.utils import timezone
 from decimal import Decimal
-from .models_extended import PaymentMilestone
+from .models_milestone import PaymentMilestone
 from .models import Payment
-from apps/bidding.models import Contract
+from apps.bidding.models import Contract
 
 
 @transaction.atomic
@@ -30,6 +32,8 @@ def create_milestone(contract_id, title, description, amount, due_date=None):
     except Contract.DoesNotExist:
         raise ValidationError("Contract not found")
     
+    amount = Decimal(str(amount))
+    
     # Validate amount
     if amount <= 0:
         raise ValidationError("Amount must be positive")
@@ -37,7 +41,7 @@ def create_milestone(contract_id, title, description, amount, due_date=None):
     # Check total milestones don't exceed contract amount
     total_milestones = PaymentMilestone.objects.filter(
         contract=contract
-    ).aggregate(total=models.Sum('amount'))['total'] or Decimal('0')
+    ).aggregate(total=Sum('amount'))['total'] or Decimal('0')
     
     if total_milestones + amount > contract.agreed_amount:
         raise ValidationError(
@@ -45,11 +49,18 @@ def create_milestone(contract_id, title, description, amount, due_date=None):
             f"exceed contract amount ({contract.agreed_amount})"
         )
     
+    last_order = PaymentMilestone.objects.filter(
+        contract=contract
+    ).aggregate(max_order=Max('order'))['max_order'] or 0
+    percentage = (amount / contract.agreed_amount) * Decimal('100')
+    
     milestone = PaymentMilestone.objects.create(
         contract=contract,
         title=title,
         description=description,
         amount=amount,
+        percentage=percentage,
+        order=last_order + 1,
         due_date=due_date,
         status=PaymentMilestone.Status.PENDING
     )
@@ -82,8 +93,8 @@ def complete_milestone(milestone_id, user):
     if milestone.status != PaymentMilestone.Status.PENDING:
         raise ValidationError(f"Milestone status is {milestone.status}")
     
-    milestone.status = PaymentMilestone.Status.COMPLETED
-    milestone.completed_at = timezone.now()
+    milestone.status = PaymentMilestone.Status.SUBMITTED
+    milestone.submitted_at = timezone.now()
     milestone.save()
     
     return milestone
@@ -115,27 +126,30 @@ def release_milestone_payment(milestone_id, client):
         raise ValidationError("Only project owner can release milestone payments")
     
     # Check milestone status
-    if milestone.status != PaymentMilestone.Status.COMPLETED:
-        raise ValidationError("Milestone must be completed before payment release")
+    if milestone.status not in [PaymentMilestone.Status.SUBMITTED, PaymentMilestone.Status.APPROVED]:
+        raise ValidationError("Milestone must be submitted before payment release")
     
     # Check if already paid
     if milestone.payment_id:
         raise ValidationError("Milestone already paid")
     
-    # Create payment for milestone
-    payment = Payment.objects.create(
-        contract=milestone.contract,
-        total_amount=milestone.amount,
-        status=Payment.Status.PENDING
-    )
+    try:
+        payment = Payment.objects.get(contract=milestone.contract)
+    except Payment.DoesNotExist:
+        raise ValidationError("Contract escrow must be funded before milestone release")
     
-    # Link payment to milestone
-    milestone.payment = payment
-    milestone.status = PaymentMilestone.Status.PAID
+    if payment.status != Payment.Status.ESCROWED:
+        raise ValidationError("Contract payment must be in escrow before milestone release")
+    
+    # Link payment to milestone; payout task will mark it PAID after Razorpay payout succeeds.
+    milestone.payment_id = str(payment.id)
+    milestone.status = PaymentMilestone.Status.APPROVED
+    milestone.approved_by = client
+    milestone.approved_at = timezone.now()
     milestone.save()
     
-    # Release payment
-    release_payment(payment.id)
+    # Release the contract escrow through the normal payout path.
+    payment = release_payment(milestone.contract, client)
     
     return payment
 
@@ -161,7 +175,7 @@ def get_milestone_progress(contract_id):
     ).aggregate(
         total_amount=Sum('amount'),
         total_count=Count('id'),
-        completed_count=Count('id', filter=Q(status=PaymentMilestone.Status.COMPLETED)),
+        completed_count=Count('id', filter=Q(status__in=[PaymentMilestone.Status.SUBMITTED, PaymentMilestone.Status.APPROVED])),
         paid_count=Count('id', filter=Q(status=PaymentMilestone.Status.PAID)),
         paid_amount=Sum('amount', filter=Q(status=PaymentMilestone.Status.PAID))
     )

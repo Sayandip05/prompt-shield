@@ -1,4 +1,4 @@
-﻿from django.db import models
+from django.db import models
 from django.conf import settings
 
 from apps.bidding.models import Contract
@@ -11,7 +11,9 @@ class Payment(models.Model):
     class Status(models.TextChoices):
         PENDING = "PENDING", "Pending"
         ESCROWED = "ESCROWED", "Escrowed"
+        PAYOUT_PENDING = "PAYOUT_PENDING", "Payout Pending"
         RELEASED = "RELEASED", "Released"
+        PAYOUT_FAILED = "PAYOUT_FAILED", "Payout Failed"
         REFUNDED = "REFUNDED", "Refunded"
     
     contract = models.OneToOneField(
@@ -35,6 +37,12 @@ class Payment(models.Model):
         blank=True,
         help_text="Razorpay Payment ID"
     )
+    razorpay_payout_id = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text="RazorpayX Payout ID"
+    )
+    payout_error = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     

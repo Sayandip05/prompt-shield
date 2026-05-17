@@ -84,7 +84,7 @@ class PaymentMilestoneViewSet(viewsets.ViewSet):
             payment = release_milestone_payment(pk, request.user)
             from .serializers import PaymentSerializer
             return Response({
-                'message': 'Milestone payment released',
+                'message': 'Milestone payment release initiated',
                 'payment': PaymentSerializer(payment).data
             }, status=status.HTTP_200_OK)
         except ValidationError as e:

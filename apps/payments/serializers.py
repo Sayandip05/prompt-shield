@@ -1,4 +1,4 @@
-﻿from rest_framework import serializers
+from rest_framework import serializers
 
 from .models import Payment, Escrow, PlatformEarning
 from apps.bidding.serializers import ContractSerializer
@@ -24,6 +24,8 @@ class PaymentSerializer(serializers.ModelSerializer):
             'contract',
             'total_amount',
             'status',
+            'razorpay_payout_id',
+            'payout_error',
             'escrow',
             'created_at',
             'updated_at',
@@ -54,6 +56,7 @@ class PaymentListSerializer(serializers.ModelSerializer):
             'client_name',
             'total_amount',
             'status',
+            'razorpay_payout_id',
             'created_at',
         ]
 

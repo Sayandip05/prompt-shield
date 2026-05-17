@@ -1,4 +1,4 @@
-﻿from django.db.models import Sum, Q
+from django.db.models import Sum, Q
 from rest_framework import status, viewsets, permissions
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
@@ -111,7 +111,7 @@ class PaymentViewSet(viewsets.ReadOnlyModelViewSet):
             payment = release_payment(contract, request.user)
             return Response(
                 {
-                    "message": "Payment released successfully.",
+                    "message": "Payment release initiated successfully.",
                     "payment": PaymentSerializer(payment).data,
                 },
                 status=status.HTTP_200_OK,
@@ -210,9 +210,10 @@ def razorpay_webhook(request):
     raw_body = request.body
     payload = json.loads(raw_body)
     sig_header = request.headers.get('X-Razorpay-Signature')
+    event_id = request.headers.get('X-Razorpay-Event-Id')
     
     try:
-        process_razorpay_webhook(payload, raw_body, sig_header)
+        process_razorpay_webhook(payload, raw_body, sig_header, event_id)
         return Response({"status": "success"}, status=status.HTTP_200_OK)
     except ValidationError as e:
         return Response(

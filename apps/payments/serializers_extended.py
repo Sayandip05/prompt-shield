@@ -2,7 +2,7 @@
 Serializers for Extended Payment Features
 """
 from rest_framework import serializers
-from .models_extended import PaymentMilestone
+from .models_milestone import PaymentMilestone
 
 
 class PaymentMilestoneSerializer(serializers.ModelSerializer):
@@ -22,9 +22,9 @@ class PaymentMilestoneSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'contract_id', 'project_title', 'freelancer_email',
             'title', 'description', 'amount', 'due_date',
-            'status', 'created_at', 'completed_at', 'payment_id'
+            'status', 'created_at', 'submitted_at', 'paid_at', 'payment_id'
         ]
-        read_only_fields = ['id', 'contract_id', 'project_title', 'freelancer_email', 'status', 'created_at', 'completed_at', 'payment_id']
+        read_only_fields = ['id', 'contract_id', 'project_title', 'freelancer_email', 'status', 'created_at', 'submitted_at', 'paid_at', 'payment_id']
 
 
 class CreateMilestoneSerializer(serializers.Serializer):
