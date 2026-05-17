@@ -1,4 +1,4 @@
-﻿from rest_framework import status, generics, permissions
+from rest_framework import status, generics, permissions
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework_simplejwt.views import TokenObtainPairView
@@ -399,6 +399,5 @@ class ReactivateAccountView(generics.GenericAPIView):
                 {"error": e.message, "code": e.code},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-   
-    
- 
+ 
+ 

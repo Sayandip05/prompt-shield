@@ -1,4 +1,4 @@
-﻿from django.db import transaction
+from django.db import transaction
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
 
@@ -443,5 +443,4 @@ def reactivate_account(user: User) -> User:
     user.save()
     
     return user
-   
- 
+ 
