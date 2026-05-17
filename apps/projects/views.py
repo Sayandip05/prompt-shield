@@ -1,4 +1,4 @@
-﻿from django.db.models import Q
+from django.db.models import Q
 from rest_framework import status, viewsets, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response

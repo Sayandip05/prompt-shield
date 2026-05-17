@@ -1,4 +1,4 @@
-﻿from django.db import transaction
+from django.db import transaction
 from django.db.models import QuerySet
 
 from .models import Project, ProjectSkill
@@ -27,7 +27,7 @@ def create_project(
     Returns:
         Created Project instance
     """
-    from users.models import User
+    from apps.users.models import User
     
     if client.role != User.Roles.CLIENT:
         raise PermissionDeniedError("Only clients can create projects.")
