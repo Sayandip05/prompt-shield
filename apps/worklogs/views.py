@@ -1,7 +1,8 @@
-﻿from rest_framework import status, viewsets, permissions
+from rest_framework import status, viewsets, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
+from asgiref.sync import sync_to_async
 
 from .models import WorkLog, WeeklyReport, DeliveryProof, Deliverable
 from .serializers import (
@@ -63,7 +64,10 @@ class WorkLogViewSet(viewsets.ModelViewSet):
         contract_id = self.request.query_params.get('contract')
         
         if contract_id:
-            return get_contract_worklogs(contract_id)
+            queryset = get_contract_worklogs(contract_id)
+            if user.role == 'FREELANCER':
+                return queryset.filter(freelancer=user)
+            return queryset.filter(contract__bid__project__client=user)
         
         if user.role == 'FREELANCER':
             return WorkLog.objects.filter(freelancer=user)
@@ -171,7 +175,10 @@ class WeeklyReportViewSet(viewsets.ReadOnlyModelViewSet):
         contract_id = self.request.query_params.get('contract')
         
         if contract_id:
-            return get_contract_weekly_reports(contract_id)
+            queryset = get_contract_weekly_reports(contract_id)
+            if self.request.user.role == 'FREELANCER':
+                return queryset.filter(contract__bid__freelancer=self.request.user)
+            return queryset.filter(contract__bid__project__client=self.request.user)
         
         user = self.request.user
         
@@ -201,6 +208,7 @@ class DeliveryProofViewSet(viewsets.ViewSet):
                 status=status.HTTP_404_NOT_FOUND,
             )
         
+        self.check_object_permissions(request, proof)
         serializer = DeliveryProofSerializer(proof)
         return Response(serializer.data)
     
@@ -208,10 +216,21 @@ class DeliveryProofViewSet(viewsets.ViewSet):
     def generate(self, request, pk=None):
         """Generate delivery proof for a contract."""
         try:
+            contract = Contract.objects.get(id=pk)
+            if request.user not in [contract.bid.freelancer, contract.bid.project.client]:
+                return Response(
+                    {"error": "You are not part of this contract.", "code": "permission_denied"},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
             proof = generate_delivery_proof(pk)
             return Response(
                 DeliveryProofSerializer(proof).data,
                 status=status.HTTP_201_CREATED,
+            )
+        except Contract.DoesNotExist:
+            return Response(
+                {"error": "Contract not found.", "code": "not_found"},
+                status=status.HTTP_404_NOT_FOUND,
             )
         except ValidationError as e:
             return Response(
@@ -366,17 +385,17 @@ class DeliverableViewSet(viewsets.ModelViewSet):
 
 class AIChatViewSet(viewsets.ViewSet):
     """
-    ViewSet for AI Chat operations.
+    ViewSet for AI Chat operations (Async for non-blocking AI calls).
     
     Endpoints:
-    - POST /api/worklogs/ai-chat/message/ - Send message to AI
-    - POST /api/worklogs/ai-chat/generate-deliverable/ - Generate deliverable from chat
+    - POST /api/worklogs/ai-chat/message/ - Send message to AI (async)
+    - POST /api/worklogs/ai-chat/generate-deliverable/ - Generate deliverable from chat (async)
     """
     permission_classes = [permissions.IsAuthenticated, IsContractFreelancer]
     
     @action(detail=False, methods=['post'])
-    def message(self, request):
-        """Send a message to the AI assistant."""
+    async def message(self, request):
+        """Send a message to the AI assistant (async, non-blocking)."""
         serializer = AIChatMessageSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         
@@ -388,7 +407,8 @@ class AIChatViewSet(viewsets.ViewSet):
             )
         
         try:
-            contract = Contract.objects.get(id=int(contract_id))
+            # Async database query
+            contract = await sync_to_async(Contract.objects.get)(id=int(contract_id))
             
             # Verify freelancer is assigned
             if contract.bid.freelancer != request.user:
@@ -397,7 +417,8 @@ class AIChatViewSet(viewsets.ViewSet):
                     status=status.HTTP_403_FORBIDDEN,
                 )
             
-            response = process_ai_chat_message(
+            # Async AI call (non-blocking)
+            response = await sync_to_async(process_ai_chat_message)(
                 contract_id=int(contract_id),
                 message=serializer.validated_data['message'],
                 chat_history=serializer.validated_data.get('chat_history', []),
@@ -413,8 +434,8 @@ class AIChatViewSet(viewsets.ViewSet):
             )
     
     @action(detail=False, methods=['post'])
-    def generate_deliverable(self, request):
-        """Generate a deliverable from the complete chat conversation."""
+    async def generate_deliverable(self, request):
+        """Generate a deliverable from the complete chat conversation (async, non-blocking)."""
         contract_id = request.query_params.get('contract')
         if not contract_id:
             return Response(
@@ -432,7 +453,8 @@ class AIChatViewSet(viewsets.ViewSet):
             )
         
         try:
-            contract = Contract.objects.get(id=int(contract_id))
+            # Async database query
+            contract = await sync_to_async(Contract.objects.get)(id=int(contract_id))
             
             # Verify freelancer is assigned
             if contract.bid.freelancer != request.user:
@@ -441,7 +463,8 @@ class AIChatViewSet(viewsets.ViewSet):
                     status=status.HTTP_403_FORBIDDEN,
                 )
             
-            deliverable = generate_deliverable_from_chat(
+            # Async AI call (non-blocking)
+            deliverable = await sync_to_async(generate_deliverable_from_chat)(
                 chat_transcript=chat_transcript,
                 project_name=contract.bid.project.title,
                 contract_id=int(contract_id),

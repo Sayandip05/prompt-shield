@@ -1,4 +1,4 @@
-﻿from django.db.models import QuerySet, Sum
+from django.db.models import QuerySet, Sum
 from django.shortcuts import get_object_or_404
 from datetime import date, timedelta
 

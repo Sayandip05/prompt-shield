@@ -14,7 +14,6 @@ try:
     from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
     from langchain_core.output_parsers import StrOutputParser, JsonOutputParser
     from langgraph.graph import StateGraph, END
-    from langgraph.prebuilt import ToolExecutor
     from langsmith import traceable
     LANGCHAIN_AVAILABLE = True
 except ImportError:
@@ -317,7 +316,7 @@ Guidelines:
         json_match = re.search(r'```json\s*(\{.*?\})\s*```', content, re.DOTALL)
         if json_match:
             try:
-                return json.loads(json_match.group(1))
+                return self._normalize_report_data(json.loads(json_match.group(1)))
             except json.JSONDecodeError:
                 pass
         
@@ -325,11 +324,39 @@ Guidelines:
         json_match = re.search(r'\{[\s\S]*"report_ready"[\s\S]*\}', content)
         if json_match:
             try:
-                return json.loads(json_match.group(0))
+                return self._normalize_report_data(json.loads(json_match.group(0)))
             except json.JSONDecodeError:
                 pass
         
         return None
+    
+    def _normalize_report_data(self, data: Dict) -> Dict:
+        """Normalize model output into the deliverable shape expected by the app."""
+        hours_worked = data.get("hours_worked", 4.0)
+        try:
+            hours_worked = float(hours_worked)
+        except (TypeError, ValueError):
+            hours_worked = 4.0
+        hours_worked = min(max(hours_worked, 0.1), 24.0)
+        
+        tasks_completed = data.get("tasks_completed") or []
+        if isinstance(tasks_completed, str):
+            tasks_completed = [tasks_completed]
+        
+        technologies_used = data.get("technologies_used") or []
+        if isinstance(technologies_used, str):
+            technologies_used = [technologies_used]
+        
+        return {
+            "report_ready": bool(data.get("report_ready", True)),
+            "title": str(data.get("title") or "Work Completed"),
+            "description": str(data.get("description") or "Work was completed as discussed in the chat conversation."),
+            "hours_worked": hours_worked,
+            "tasks_completed": tasks_completed,
+            "technologies_used": technologies_used,
+            "challenges_faced": str(data.get("challenges_faced") or ""),
+            "next_steps": str(data.get("next_steps") or ""),
+        }
     
     def _fallback_response(self, messages: List[Dict[str, str]]) -> Dict:
         """Fallback response when Groq is not available."""
@@ -433,13 +460,13 @@ Respond ONLY with a JSON object in this exact format:
                 
                 # Try to parse JSON from response
                 try:
-                    return json.loads(content)
+                    return self._normalize_report_data(json.loads(content))
                 except json.JSONDecodeError:
                     # Try to extract JSON from markdown code block
                     import re
                     json_match = re.search(r'```json\s*(\{.*?\})\s*```', content, re.DOTALL)
                     if json_match:
-                        return json.loads(json_match.group(1))
+                        return self._normalize_report_data(json.loads(json_match.group(1)))
                     raise
                     
             except Exception as e:
@@ -463,7 +490,7 @@ Respond ONLY with a JSON object in this exact format:
                 )
                 
                 content = response.choices[0].message.content
-                return json.loads(content)
+                return self._normalize_report_data(json.loads(content))
                 
             except Exception as e:
                 print(f"Groq API error: {e}")

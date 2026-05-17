@@ -1,4 +1,4 @@
-﻿from celery import shared_task
+from celery import shared_task
 from datetime import date, timedelta
 
 from .models import WorkLog, WeeklyReport, DeliveryProof

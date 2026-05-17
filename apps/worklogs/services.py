@@ -1,4 +1,4 @@
-﻿import json
+import json
 from django.db import transaction
 from django.utils import timezone
 from datetime import date, timedelta

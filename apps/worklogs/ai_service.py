@@ -1,8 +1,9 @@
-﻿"""
+"""
 AI Service for generating weekly progress reports using Groq API.
 Integrated with LangChain, LangGraph, and LangSmith for proper tracing and monitoring.
 """
 from django.conf import settings
+from django.db.models import Sum
 from datetime import date, timedelta
 from typing import Optional, TypedDict, Annotated
 import operator
@@ -104,7 +105,7 @@ def build_report_prompt(state: ReportState) -> ReportState:
     # Get total hours to date
     total_hours_to_date = WorkLog.objects.filter(
         contract=contract
-    ).count()
+    ).aggregate(total=Sum("hours_worked"))["total"] or 0
     
     # Build the prompt
     prompt = f"""You are writing a professional weekly progress report for a client.

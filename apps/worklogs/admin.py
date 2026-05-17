@@ -1,4 +1,4 @@
-﻿from django.contrib import admin
+from django.contrib import admin
 from apps.worklogs.models import WorkLog, WeeklyReport, DeliveryProof
 
 

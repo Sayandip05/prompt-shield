@@ -1,4 +1,4 @@
-﻿"""
+"""
 PDF Service for generating weekly reports and delivery proofs.
 Uses WeasyPrint for HTML to PDF conversion.
 """
