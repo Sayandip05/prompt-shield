@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { Briefcase, Mail, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react'
-import { authAPI } from '../../api/auth'
+import { useAuth } from '../../context/AuthContext'
 
 const LoginPage = () => {
   const navigate = useNavigate()
+  const { login } = useAuth()
   const [form, setForm] = useState({ email: '', password: '' })
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -20,10 +21,8 @@ const LoginPage = () => {
     setLoading(true)
     setError('')
     try {
-      const response = await authAPI.login(form.email, form.password)
-      const { access, refresh, user } = response.data
-      localStorage.setItem('access_token', access)
-      localStorage.setItem('refresh_token', refresh)
+      // login() sets the user in AuthContext so route guards work immediately
+      const user = await login(form.email, form.password)
       if (user?.role === 'CLIENT') navigate('/client/dashboard')
       else navigate('/freelancer/dashboard')
     } catch (err) {
