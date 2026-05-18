@@ -26,6 +26,7 @@ env = environ.Env(
     RAZORPAY_KEY_ID=(str, ""),
     RAZORPAY_KEY_SECRET=(str, ""),
     RAZORPAY_WEBHOOK_SECRET=(str, ""),
+    RAZORPAY_ACCOUNT_NUMBER=(str, ""),
     AWS_ACCESS_KEY_ID=(str, ""),
     AWS_SECRET_ACCESS_KEY=(str, ""),
     AWS_STORAGE_BUCKET_NAME=(str, ""),
@@ -73,10 +74,11 @@ THIRD_PARTY_APPS = [
     "django_celery_beat",
     "django_elasticsearch_dsl",
     "django_extensions",
-    "django_axes",
+    "axes",
 ]
 
 LOCAL_APPS = [
+    "core",
     "apps.users",
     "apps.projects",
     "apps.bidding",
@@ -100,6 +102,7 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "axes.middleware.AxesMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "core.middleware.CORSCustomMiddleware",
@@ -185,6 +188,9 @@ SIMPLE_JWT = {
     "ROTATE_REFRESH_TOKENS": True,
     "BLACKLIST_AFTER_ROTATION": True,
     "UPDATE_LAST_LOGIN": True,
+    "AUTH_HEADER_TYPES": ("Bearer",),
+    "AUTH_TOKEN_CLASSES": ("rest_framework_simplejwt.tokens.AccessToken",),
+    "TOKEN_TYPE_CLAIM": "token_type",
 }
 
 # CORS
@@ -194,28 +200,67 @@ CORS_ALLOW_CREDENTIALS = True
 # Redis
 REDIS_URL = env("REDIS_URL")
 
-# Channels
+# Channels Configuration (WebSocket with Upstash Redis)
 CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
             "hosts": [REDIS_URL],
+            "prefix": "freelanceflow:channels:",
+            "capacity": 1500,
+            "expiry": 10,
+            "group_expiry": 86400,  # 24 hours
+            "symmetric_encryption_keys": [SECRET_KEY],
         },
     },
 }
 
-# Celery
+# Celery Configuration (Upstash Redis)
 CELERY_BROKER_URL = env("CELERY_BROKER_URL")
 CELERY_RESULT_BACKEND = env("CELERY_RESULT_BACKEND")
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
+CELERY_RESULT_ACCEPT_CONTENT = ["json"]
 CELERY_TIMEZONE = TIME_ZONE
+CELERY_ENABLE_UTC = True
+
+# Celery Queue Configuration (Isolation)
+CELERY_TASK_DEFAULT_QUEUE = "freelanceflow"
+CELERY_TASK_DEFAULT_EXCHANGE = "freelanceflow"
+CELERY_TASK_DEFAULT_ROUTING_KEY = "freelanceflow"
+
+# Celery Result Backend Settings
+CELERY_RESULT_BACKEND_TRANSPORT_OPTIONS = {
+    "master_name": "mymaster",
+    "socket_keepalive": True,
+    "retry_on_timeout": True,
+    "health_check_interval": 30,
+}
+
+# Celery Broker Settings (Upstash Redis)
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+CELERY_BROKER_CONNECTION_RETRY = True
+CELERY_BROKER_CONNECTION_MAX_RETRIES = 10
+CELERY_BROKER_POOL_LIMIT = 10
+
+# Task execution settings
+CELERY_TASK_TRACK_STARTED = True
+CELERY_TASK_TIME_LIMIT = 30 * 60  # 30 minutes hard limit
+CELERY_TASK_SOFT_TIME_LIMIT = 25 * 60  # 25 minutes soft limit
+CELERY_TASK_ACKS_LATE = True
+CELERY_TASK_REJECT_ON_WORKER_LOST = True
+CELERY_WORKER_PREFETCH_MULTIPLIER = 1
+CELERY_WORKER_MAX_TASKS_PER_CHILD = 1000
+
+# Beat schedule (for periodic tasks)
+CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
 
 # Razorpay
 RAZORPAY_KEY_ID = env("RAZORPAY_KEY_ID")
 RAZORPAY_KEY_SECRET = env("RAZORPAY_KEY_SECRET")
 RAZORPAY_WEBHOOK_SECRET = env("RAZORPAY_WEBHOOK_SECRET")
+RAZORPAY_ACCOUNT_NUMBER = env("RAZORPAY_ACCOUNT_NUMBER")
 
 # AWS S3
 AWS_ACCESS_KEY_ID = env("AWS_ACCESS_KEY_ID")
@@ -266,34 +311,50 @@ FRONTEND_URL = env("FRONTEND_URL")
 # Platform Settings
 PLATFORM_CUT_PERCENTAGE = env("PLATFORM_CUT_PERCENTAGE")
 
-# Cache (Redis)
+# Cache Configuration (Redis / Upstash)
+# HiredisParser was removed in redis-py 5.x — do not set PARSER_CLASS.
 CACHES = {
     "default": {
-        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "BACKEND": "django_redis.cache.RedisCache",
         "LOCATION": env("REDIS_URL"),
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            "CONNECTION_POOL_CLASS_KWARGS": {
+                "max_connections": 50,
+                "retry_on_timeout": True,
+            },
+            "SOCKET_CONNECT_TIMEOUT": 5,
+            "SOCKET_TIMEOUT": 5,
+            "IGNORE_EXCEPTIONS": True,  # Degrade gracefully when Redis is down
         },
         "KEY_PREFIX": "freelanceflow",
-        "TIMEOUT": 300,
-    }
+        "TIMEOUT": 300,  # 5 minutes default
+        "VERSION": 1,
+    },
+    # Fallback in-process cache used by Django Axes when Redis is unavailable.
+    "axes": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": "axes",
+    },
 }
 
 # Django Axes (Brute Force Protection)
+# Using the DB handler so login protection works without a running Redis instance.
 AXES_ENABLED = True
-AXES_HANDLER = "axes.handlers.cache.AxesCacheHandler"
-AXES_CACHE = "default"
+AXES_HANDLER = "axes.handlers.database.AxesDatabaseHandler"
 AXES_LOGIN_FAILURE_LIMIT = 5
 AXES_COOLOFF_TIME = 300
 AXES_LOCK_OUT = True
 
 # Authentication Backends
 AUTHENTICATION_BACKENDS = [
+    "axes.backends.AxesStandaloneBackend",
     "django.contrib.auth.backends.ModelBackend",
 ]
 
 # Session Settings
-SESSION_ENGINE = "django.contrib.sessions.backends.cache"
+# Use DB-backed sessions so login works without a local Redis instance.
+SESSION_ENGINE = "django.contrib.sessions.backends.db"
 SESSION_CACHE_ALIAS = "default"
 SESSION_COOKIE_NAME = "ff_sessionid"
 SESSION_COOKIE_HTTPONLY = True
@@ -305,20 +366,3 @@ CSRF_COOKIE_NAME = "ff_csrftoken"
 CSRF_COOKIE_HTTPONLY = True
 CSRF_COOKIE_SAMESITE = "Lax"
 CSRF_USE_SESSIONS = False
-
-# JWT Settings
-from datetime import timedelta
-
-SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=60),
-    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
-    "ROTATE_REFRESH_TOKENS": True,
-    "BLACKLIST_AFTER_ROTATION": True,
-    "UPDATE_LAST_LOGIN": True,
-    "AUTH_HEADER_TYPES": ("Bearer",),
-    "AUTH_TOKEN_CLASSES": ("rest_framework_simplejwt.tokens.AccessToken",),
-    "TOKEN_TYPE_CLAIM": "token_type",
-}
-  
- 
- 
