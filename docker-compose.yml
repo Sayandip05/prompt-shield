@@ -1,27 +1,92 @@
-﻿version: "3.9"
+# ============================================
+# FreelanceFlow — docker-compose.yml
+# ============================================
+# Infrastructure split:
+#   Cloud  : Supabase PostgreSQL  (DATABASE_URL in .env)
+#   Cloud  : Upstash Redis        (REDIS_URL / CELERY_BROKER_URL in .env)
+#   Local  : Elasticsearch 8      (this file — container "elastic")
+#
+# Usage:
+#   docker compose up --build          # start everything
+#   docker compose up --build -d       # detached
+#   docker compose logs -f web         # tail web logs
+#   docker compose exec web python manage.py migrate
+#   docker compose exec web python manage.py seed
+#   docker compose exec web python manage.py search_index --rebuild -f
+#   docker compose down                # stop + remove containers
+#   docker compose down -v             # also wipe ES volume
+# ============================================
 
 services:
-  db:
-    image: postgres:15
-    stop_grace_period: 10s
+
+  # ──────────────────────────────────────────
+  # Elasticsearch  (search engine — local)
+  # ──────────────────────────────────────────
+  elastic:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.14.0
+    container_name: freelanceflow_elasticsearch
+    environment:
+      - node.name=es-node-01
+      - cluster.name=freelanceflow-cluster
+      - discovery.type=single-node
+      # Security disabled for local dev — no passwords, no TLS
+      - xpack.security.enabled=false
+      - xpack.security.enrollment.enabled=false
+      - xpack.security.http.ssl.enabled=false
+      - xpack.security.transport.ssl.enabled=false
+      # Keep memory footprint reasonable
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    ports:
+      - "9200:9200"
+    volumes:
+      - elastic_data:/usr/share/elasticsearch/data
+    networks:
+      - freelanceflow_network
+    restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-  
-  redis:
-    image: redis:7
-    stop_grace_period: 10s
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 3s
-      retries: 5
-  
+      test:
+        - "CMD-SHELL"
+        - "curl -sf http://localhost:9200/_cluster/health?wait_for_status=yellow&timeout=5s || exit 1"
+      interval: 20s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+
+  # ──────────────────────────────────────────
+  # Django dev server  (hot-reload via volume)
+  # ──────────────────────────────────────────
   web:
     build: .
+    container_name: freelanceflow_web
     command: python manage.py runserver 0.0.0.0:8000
+    ports:
+      - "8000:8000"
+    volumes:
+      # Mount source code for hot-reload in development
+      - .:/app
+      - /app/venv
+    env_file:
+      - .env
+    environment:
+      - DJANGO_SETTINGS_MODULE=config.settings.local
+      - PYTHONUNBUFFERED=1
+      # Inside Docker, ES is reachable via container name, not localhost
+      - ELASTICSEARCH_URL=http://elastic:9200
+    networks:
+      - freelanceflow_network
+    # NOTE: We do NOT hard-depend on elastic being healthy.
+    # ES signals are resilient — the app starts immediately and
+    # logs a WARNING if ES is not yet ready.
+    depends_on:
+      - elastic
+    restart: unless-stopped
     stop_grace_period: 30s
     stop_signal: SIGTERM
     healthcheck:
@@ -30,10 +95,31 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
-  
+
+  # ──────────────────────────────────────────
+  # Daphne  (WebSocket / ASGI server)
+  # ──────────────────────────────────────────
   daphne:
     build: .
+    container_name: freelanceflow_daphne
     command: daphne -b 0.0.0.0 -p 8001 config.asgi:application
+    ports:
+      - "8001:8001"
+    volumes:
+      - .:/app
+      - /app/venv
+    env_file:
+      - .env
+    environment:
+      - DJANGO_SETTINGS_MODULE=config.settings.local
+      - PYTHONUNBUFFERED=1
+      - ELASTICSEARCH_URL=http://elastic:9200
+    networks:
+      - freelanceflow_network
+    depends_on:
+      - elastic
+      - web
+    restart: unless-stopped
     stop_grace_period: 30s
     stop_signal: SIGTERM
     healthcheck:
@@ -42,37 +128,103 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
-  
+
+  # ──────────────────────────────────────────
+  # Celery worker  (background tasks)
+  # ──────────────────────────────────────────
   celery:
     build: .
-    command: celery -A config worker -l info --max-tasks-per-child=1000
+    container_name: freelanceflow_celery
+    command: >
+      celery -A config worker
+      -Q freelanceflow,freelanceflow_high_priority,freelanceflow_low_priority
+      -l info
+      --max-tasks-per-child=1000
+    volumes:
+      - .:/app
+      - /app/venv
+    env_file:
+      - .env
+    environment:
+      - DJANGO_SETTINGS_MODULE=config.settings.local
+      - PYTHONUNBUFFERED=1
+      - ELASTICSEARCH_URL=http://elastic:9200
+    networks:
+      - freelanceflow_network
+    depends_on:
+      - web
+    restart: unless-stopped
     stop_grace_period: 60s
     stop_signal: SIGTERM
     healthcheck:
-      test: ["CMD-SHELL", "celery -A config inspect ping"]
+      test: ["CMD-SHELL", "celery -A config inspect ping -t 5"]
       interval: 30s
-      timeout: 10s
+      timeout: 15s
       retries: 3
       start_period: 40s
-  
+
+  # ──────────────────────────────────────────
+  # Celery Beat  (periodic task scheduler)
+  # ──────────────────────────────────────────
   celery-beat:
     build: .
-    command: celery -A config beat -l info
+    container_name: freelanceflow_celery_beat
+    command: >
+      celery -A config beat
+      -l info
+      --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    volumes:
+      - .:/app
+      - /app/venv
+    env_file:
+      - .env
+    environment:
+      - DJANGO_SETTINGS_MODULE=config.settings.local
+      - PYTHONUNBUFFERED=1
+    networks:
+      - freelanceflow_network
+    depends_on:
+      - web
+    restart: unless-stopped
     stop_grace_period: 30s
     stop_signal: SIGTERM
-  
+
+  # ──────────────────────────────────────────
+  # Flower  (Celery monitoring UI → :5555)
+  # ──────────────────────────────────────────
   flower:
     build: .
-    command: celery -A config flower
+    container_name: freelanceflow_flower
+    command: celery -A config flower --port=5555
+    ports:
+      - "5555:5555"
+    volumes:
+      - .:/app
+      - /app/venv
+    env_file:
+      - .env
+    environment:
+      - DJANGO_SETTINGS_MODULE=config.settings.local
+      - PYTHONUNBUFFERED=1
+    networks:
+      - freelanceflow_network
+    depends_on:
+      - celery
+    restart: unless-stopped
     stop_grace_period: 20s
     stop_signal: SIGTERM
-  
-  elastic:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.14.0
-    stop_grace_period: 30s
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 60s
+
+# ──────────────────────────────────────────
+# Shared network
+# ──────────────────────────────────────────
+networks:
+  freelanceflow_network:
+    driver: bridge
+
+# ──────────────────────────────────────────
+# Named volumes
+# ──────────────────────────────────────────
+volumes:
+  # Persists Elasticsearch data across container restarts
+  elastic_data:
+    driver: local
