@@ -7,6 +7,11 @@ WORKDIR /build
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     libpq-dev \
+    # weasyprint build deps
+    libglib2.0-dev \
+    libpango1.0-dev \
+    libcairo2-dev \
+    libffi-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies into a virtual env
@@ -25,6 +30,13 @@ FROM python:3.12-slim AS production
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq5 \
     curl \
+    # weasyprint runtime deps (Pango, Cairo, GObject)
+    libglib2.0-0 \
+    libpango-1.0-0 \
+    libpangocairo-1.0-0 \
+    libcairo2 \
+    libffi8 \
+    fonts-liberation \
     && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user
