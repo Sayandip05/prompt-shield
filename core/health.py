@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 def health_check(request):
     """
     Basic health check returning service status.
-    Checks database connectivity and Redis availability.
+    Checks database connectivity, Redis, Celery, and Elasticsearch availability.
     """
     health = {
         "status": "healthy",
@@ -63,7 +63,27 @@ def health_check(request):
         logger.warning("Health check - celery failed: %s", str(e))
         health["checks"]["celery"] = {"status": "down", "error": str(e)}
 
-    status_code = 200 if health["status"] == "healthy" else 503
+    # Elasticsearch check — only degrades, never marks unhealthy.
+    # The app continues to work without ES (signals are resilient).
+    try:
+        import urllib.request
+        es_url = getattr(settings, "ELASTICSEARCH_URL", "http://localhost:9200")
+        url = f"{es_url.rstrip('/')}/_cluster/health"
+        with urllib.request.urlopen(url, timeout=3) as resp:  # noqa: S310
+            if resp.status == 200:
+                health["checks"]["elasticsearch"] = {"status": "up"}
+            else:
+                health["checks"]["elasticsearch"] = {"status": "starting"}
+                if health["status"] == "healthy":
+                    health["status"] = "degraded"
+    except Exception as e:
+        logger.warning("Health check - elasticsearch unavailable: %s", str(e))
+        health["checks"]["elasticsearch"] = {"status": "down", "error": str(e)}
+        if health["status"] == "healthy":
+            health["status"] = "degraded"
+
+    # 200 for healthy/degraded; 503 only when database (critical) is down
+    status_code = 200 if health["status"] in ("healthy", "degraded") else 503
     return JsonResponse(health, status=status_code)
 
 
