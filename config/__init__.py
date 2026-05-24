@@ -1,4 +1,4 @@
-﻿"""
+"""
 FreelanceFlow Configuration Package.
 Registers graceful shutdown handlers on Django startup.
 """
