@@ -13,3 +13,7 @@ frontend/dist/
 .ruff_cache/
 .github/
 
+# Cache folders
+.cache/
+.fontconfig/
+
